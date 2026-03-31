@@ -17,7 +17,6 @@ export default function LabelPDF({
             flexDirection: 'row',
             backgroundColor: '#ffffff',
             alignItems: 'center',
-            // CORRECCIÓN: Si no hay contenido, el contenedor padre también respeta el layout
             justifyContent: !hasContent
                 ? (layout === 'qr-left' ? 'flex-start' : (layout === 'qr-right' ? 'flex-end' : 'center'))
                 : 'center',
@@ -28,22 +27,18 @@ export default function LabelPDF({
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'flex-start',
-            display: layout === 'qr-center' && hasContent ? 'flex' : 'none',
         },
         rightSection: {
             flex: 1,
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'flex-end',
-            display: layout === 'qr-center' && hasContent ? 'flex' : 'none',
         },
         infoSection: {
             flex: 1,
-            display: layout !== 'qr-center' && hasContent ? 'flex' : 'none',
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: layout === 'qr-right' ? 'flex-start' : 'flex-end',
-            width: '100%',
         },
         logo: { width: 28, height: 12, objectFit: 'contain', marginBottom: 2 },
         title: { fontSize: 7, fontWeight: 'bold', marginBottom: 1 },
@@ -55,7 +50,6 @@ export default function LabelPDF({
         },
         extraNote: { fontSize: 4, color: '#777777', marginTop: 1 },
         qrSection: {
-            // CORRECCIÓN: Ajuste de ancho cuando está solo para que no flote en el medio
             width: !hasContent ? 'auto' : (layout === 'qr-center' ? '30%' : '42%'),
             height: '100%',
             justifyContent: 'center',
@@ -68,38 +62,60 @@ export default function LabelPDF({
         }
     });
 
+    const InfoContent = () => (
+        <>
+            {logoBase64 && <Image src={logoBase64} style={styles.logo} />}
+            {showName && <Text style={styles.title}>{productName}</Text>}
+            {showSku && sku && <Text style={styles.sku}>CÓD: {sku}</Text>}
+            {showPrice && <Text style={styles.price}>${price}</Text>}
+            {promoText && <Text style={styles.promoBadge}>{promoText}</Text>}
+            {extraNote && <Text style={styles.extraNote}>{extraNote}</Text>}
+        </>
+    );
+
+    const QRContent = () => (
+        <View style={styles.qrSection}>
+            {qrCodeData && <Image src={qrCodeData} style={styles.qrImage} />}
+        </View>
+    );
+
     return (
         <Document>
             <Page size={[widthPt, heightPt]} style={styles.page}>
-                {layout === 'qr-center' && hasContent && (
-                    <View style={styles.leftSection}>
-                        {logoBase64 && <Image src={logoBase64} style={styles.logo} />}
-                        {showName && <Text style={styles.title}>{productName}</Text>}
-                        {showSku && sku && <Text style={styles.sku}>CÓD: {sku}</Text>}
-                        {showPrice && <Text style={styles.price}>${price}</Text>}
-                    </View>
+                {/* CASO 1: QR A LA IZQUIERDA */}
+                {layout === 'qr-left' && (
+                    <>
+                        <QRContent />
+                        {hasContent && <View style={styles.infoSection}><InfoContent /></View>}
+                    </>
                 )}
 
-                {layout !== 'qr-center' && hasContent && (
-                    <View style={layout === 'qr-right' ? { order: 1, ...styles.infoSection } : { order: 2, ...styles.infoSection }}>
-                        {logoBase64 && <Image src={logoBase64} style={styles.logo} />}
-                        {showName && <Text style={styles.title}>{productName}</Text>}
-                        {showSku && sku && <Text style={styles.sku}>CÓD: {sku}</Text>}
-                        {showPrice && <Text style={styles.price}>${price}</Text>}
-                        {promoText && <Text style={styles.promoBadge}>{promoText}</Text>}
-                        {extraNote && <Text style={styles.extraNote}>{extraNote}</Text>}
-                    </View>
+                {/* CASO 2: QR A LA DERECHA */}
+                {layout === 'qr-right' && (
+                    <>
+                        {hasContent && <View style={styles.infoSection}><InfoContent /></View>}
+                        <QRContent />
+                    </>
                 )}
 
-                <View style={{ order: layout === 'qr-left' ? 1 : (layout === 'qr-right' ? 2 : 1.5), ...styles.qrSection }}>
-                    {qrCodeData && <Image src={qrCodeData} style={styles.qrImage} />}
-                </View>
-
-                {layout === 'qr-center' && hasContent && (
-                    <View style={styles.rightSection}>
-                        {promoText && <Text style={styles.promoBadge}>{promoText}</Text>}
-                        {extraNote && <Text style={styles.extraNote}>{extraNote}</Text>}
-                    </View>
+                {/* CASO 3: QR AL CENTRO */}
+                {layout === 'qr-center' && (
+                    <>
+                        {hasContent && (
+                            <View style={styles.leftSection}>
+                                {logoBase64 && <Image src={logoBase64} style={styles.logo} />}
+                                {showName && <Text style={styles.title}>{productName}</Text>}
+                                {showPrice && <Text style={styles.price}>${price}</Text>}
+                            </View>
+                        )}
+                        <QRContent />
+                        {hasContent && (
+                            <View style={styles.rightSection}>
+                                {promoText && <Text style={styles.promoBadge}>{promoText}</Text>}
+                                {extraNote && <Text style={styles.extraNote}>{extraNote}</Text>}
+                            </View>
+                        )}
+                    </>
                 )}
             </Page>
         </Document>
