@@ -33,7 +33,7 @@ export default function PaginaEtiquetaFinal() {
             const { data } = await supabase.from('products').select('*').eq('id', id).single();
             if (data) {
                 setProduct(data);
-                const b64 = await QRCode.toDataURL(`https://simplik.com/p/${data.id}`, { margin: 1 });
+                const b64 = await QRCode.toDataURL(`${window.location.origin}/p/${data.id}`, { margin: 1 });
                 setQrBase64(b64);
             }
             setLoading(false);
@@ -134,8 +134,8 @@ export default function PaginaEtiquetaFinal() {
 
                             <div className="flex justify-center mb-12">
                                 <div style={{ width: width * 3.8, height: height * 3.8 }} className={`bg-white text-black flex items-center p-3 border-4 border-white/5 transition-all duration-500 shadow-2xl ${!hasContent
-                                        ? (layout === 'qr-left' ? 'justify-start' : (layout === 'qr-right' ? 'justify-end' : 'justify-center'))
-                                        : 'justify-center'
+                                    ? (layout === 'qr-left' ? 'justify-start' : (layout === 'qr-right' ? 'justify-end' : 'justify-center'))
+                                    : 'justify-center'
                                     }`}>
 
                                     {layout === 'qr-center' && hasContent ? (

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import {
     ArrowLeft, Save, UploadCloud, Plus, Trash2, Tag,
-    Image as ImageIcon, Link as LinkIcon, Info, ListTree, Loader2
+    Image as ImageIcon, Link as LinkIcon, Info, ListTree, Loader2, Video
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { updateProductAction, uploadImageAction } from '../../actions';
@@ -14,13 +14,11 @@ export default function EditarProductoUniversal() {
     const router = useRouter();
     const { id } = useParams();
 
-    // Estados de carga y error
     const [loadingPage, setLoadingPage] = useState(true);
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [errorStatus, setErrorStatus] = useState<string | null>(null);
 
-    // ESTADOS DE LOS INPUTS
     const [nombre, setNombre] = useState('');
     const [sku, setSku] = useState('');
     const [categoria, setCategoria] = useState('');
@@ -32,7 +30,10 @@ export default function EditarProductoUniversal() {
     const [variantes, setVariantes] = useState<any[]>([]);
     const [imageUrls, setImageUrls] = useState<string[]>([]);
 
-    // 1. CARGAR DATOS INICIALES
+    // NUEVOS CAMPOS PARA VISTA PÚBLICA
+    const [imageUrlPrincipal, setImageUrlPrincipal] = useState('');
+    const [videoUrl, setVideoUrl] = useState('');
+
     useEffect(() => {
         async function loadProduct() {
             const { data, error } = await supabase
@@ -58,12 +59,14 @@ export default function EditarProductoUniversal() {
             setVariantes(data.variants_config || []);
             setImageUrls(data.image_urls || []);
 
+            setImageUrlPrincipal(data.image_url || '');
+            setVideoUrl(data.video_url || '');
+
             setLoadingPage(false);
         }
         loadProduct();
     }, [id]);
 
-    // 2. LÓGICA DE SUBIDA DE IMÁGENES
     const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -86,7 +89,6 @@ export default function EditarProductoUniversal() {
         setImageUrls(imageUrls.filter(img => img !== url));
     };
 
-    // Manejo de Atributos y Variantes
     const agregarAtributo = () => setAtributos([...atributos, { id: Date.now(), clave: '', valor: '' }]);
     const actualizarAtributo = (idAt: number, campo: string, val: string) => {
         setAtributos(atributos.map(a => a.id === idAt ? { ...a, [campo]: val } : a));
@@ -97,7 +99,6 @@ export default function EditarProductoUniversal() {
         setVariantes(variantes.map(v => v.id === idVar ? { ...v, [campo]: val } : v));
     };
 
-    // 3. GUARDAR CAMBIOS
     const handleActualizar = async () => {
         setErrorStatus(null);
         setSaving(true);
@@ -112,7 +113,9 @@ export default function EditarProductoUniversal() {
             technical_specs: atributos.filter(a => a.clave && a.valor),
             variants_config: variantes.filter(v => v.nombre && v.valores),
             external_link: linkExterno,
-            image_urls: imageUrls
+            image_urls: imageUrls,
+            image_url: imageUrlPrincipal,
+            video_url: videoUrl
         };
 
         const result = await updateProductAction(id as string, updatedData);
@@ -138,7 +141,6 @@ export default function EditarProductoUniversal() {
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                 <div className="xl:col-span-2 space-y-6">
-                    {/* Información Principal */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Tag size={20} className="text-indigo-500" /> Datos Generales</h2>
                         <div className="space-y-4">
@@ -151,7 +153,6 @@ export default function EditarProductoUniversal() {
                         </div>
                     </div>
 
-                    {/* Atributos */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Info size={20} className="text-indigo-500" /> Ficha Técnica</h2>
                         <div className="space-y-3">
@@ -168,9 +169,24 @@ export default function EditarProductoUniversal() {
                 </div>
 
                 <div className="space-y-6">
-                    {/* Multimedia */}
+                    {/* Campos para la página pública */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-slate-800">
-                        <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><ImageIcon size={20} className="text-indigo-500" /> Multimedia</h2>
+                        <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><ImageIcon size={20} className="text-indigo-500" /> Imagen Pública</h2>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 flex items-center gap-1 mb-1">URL DE IMAGEN PRINCIPAL</label>
+                                <input type="url" value={imageUrlPrincipal} onChange={e => setImageUrlPrincipal(e.target.value)} placeholder="https://ejemplo.com/foto.jpg" className="w-full p-2 bg-slate-50 border rounded-lg text-sm" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 flex items-center gap-1 mb-1"><Video size={14} /> LINK VIDEO YOUTUBE</label>
+                                <input type="url" value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." className="w-full p-2 bg-slate-50 border rounded-lg text-sm" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Tu upload local anterior */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-slate-800">
+                        <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><ImageIcon size={20} className="text-slate-400" /> Adjuntos Locales</h2>
                         <div className="grid grid-cols-3 gap-2 mb-4">
                             {imageUrls.map((url, i) => (
                                 <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200">
@@ -186,12 +202,11 @@ export default function EditarProductoUniversal() {
                             )}
                         </div>
                         <div className="pt-4 border-t">
-                            <label className="text-xs font-bold text-slate-500 flex items-center gap-1 mb-1"><LinkIcon size={14} /> LINK VIDEO / DRIVE</label>
-                            <input type="url" value={linkExterno} onChange={e => setLinkExterno(e.target.value)} placeholder="https://youtube.com/..." className="w-full p-2 bg-slate-50 border rounded-lg text-sm" />
+                            <label className="text-xs font-bold text-slate-500 flex items-center gap-1 mb-1"><LinkIcon size={14} /> LINK EXTERNO (DRIVE)</label>
+                            <input type="url" value={linkExterno} onChange={e => setLinkExterno(e.target.value)} placeholder="https://drive.google.com/..." className="w-full p-2 bg-slate-50 border rounded-lg text-sm" />
                         </div>
                     </div>
 
-                    {/* Precios */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <h2 className="text-lg font-bold mb-4 text-slate-800">Precios</h2>
                         <div className="space-y-4">

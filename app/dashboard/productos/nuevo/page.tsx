@@ -3,19 +3,16 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, UploadCloud, Plus, Trash2, Tag, Image as ImageIcon, Link as LinkIcon, Info, ListTree, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, UploadCloud, Plus, Trash2, Tag, Image as ImageIcon, Link as LinkIcon, Info, ListTree, Loader2, Video } from 'lucide-react';
 
-// Importamos la acción que creamos en el archivo actions.ts
 import { createProductAction } from '../actions';
 
 export default function NuevoProductoUniversal() {
     const router = useRouter();
 
-    // Estado de carga y error
     const [loading, setLoading] = useState(false);
     const [errorStatus, setErrorStatus] = useState<string | null>(null);
 
-    // ESTADOS DE LOS INPUTS PRINCIPALES
     const [nombre, setNombre] = useState('');
     const [sku, setSku] = useState('');
     const [categoria, setCategoria] = useState('');
@@ -24,31 +21,30 @@ export default function NuevoProductoUniversal() {
     const [precioEfectivo, setPrecioEfectivo] = useState('');
     const [linkExterno, setLinkExterno] = useState('');
 
-    // ESTADOS DINÁMICOS
+    // NUEVOS CAMPOS PARA LA VISTA PÚBLICA / ETIQUETAS
+    const [imageUrlPrincipal, setImageUrlPrincipal] = useState('');
+    const [videoUrl, setVideoUrl] = useState('');
+
     const [atributos, setAtributos] = useState([{ id: 1, clave: 'Marca', valor: '' }]);
     const [variantes, setVariantes] = useState([{ id: 1, nombre: 'Opción 1', valores: '' }]);
     const [imagenesSlots, setImagenesSlots] = useState<number[]>([1]);
 
-    // Manejo de Atributos (Ficha Técnica)
     const agregarAtributo = () => setAtributos([...atributos, { id: Date.now(), clave: '', valor: '' }]);
     const eliminarAtributo = (id: number) => setAtributos(atributos.filter(a => a.id !== id));
     const actualizarAtributo = (id: number, campo: 'clave' | 'valor', valor: string) => {
         setAtributos(atributos.map(a => a.id === id ? { ...a, [campo]: valor } : a));
     };
 
-    // Manejo de Variantes (Opciones)
     const agregarVariante = () => setVariantes([...variantes, { id: Date.now(), nombre: '', valores: '' }]);
     const eliminarVariante = (id: number) => setVariantes(variantes.filter(v => v.id !== id));
     const actualizarVariante = (id: number, campo: 'nombre' | 'valores', valor: string) => {
         setVariantes(variantes.map(v => v.id === id ? { ...v, [campo]: valor } : v));
     };
 
-    // Manejo de UI de Imágenes
     const agregarRanuraImagen = () => {
         if (imagenesSlots.length < 5) setImagenesSlots([...imagenesSlots, Date.now()]);
     };
 
-    // --- FUNCIÓN PRINCIPAL DE GUARDADO ---
     const handleGuardar = async () => {
         setErrorStatus(null);
         setLoading(true);
@@ -69,7 +65,10 @@ export default function NuevoProductoUniversal() {
             technical_specs: atributos.filter(a => a.clave && a.valor),
             variants_config: variantes.filter(v => v.nombre && v.valores),
             external_link: linkExterno,
-            image_urls: []
+            image_urls: [],
+            // Guardamos las URLs para la página del QR
+            image_url: imageUrlPrincipal,
+            video_url: videoUrl
         };
 
         const result = await createProductAction(productData);
@@ -101,11 +100,7 @@ export default function NuevoProductoUniversal() {
             )}
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-
-                {/* COLUMNA IZQUIERDA */}
                 <div className="xl:col-span-2 space-y-6">
-
-                    {/* 1. Información Principal */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
                             <Tag size={20} className="text-indigo-500" /> Información Principal
@@ -137,13 +132,11 @@ export default function NuevoProductoUniversal() {
                         </div>
                     </div>
 
-                    {/* 2. Atributos Fijos */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
                             <Info size={20} className="text-indigo-500" /> Ficha Técnica (Datos Fijos)
                         </h2>
                         <p className="text-sm text-slate-500 mb-4">Datos que no cambian. Ej: Marca, Peso, Garantía, Vencimiento.</p>
-
                         <div className="space-y-3">
                             {atributos.map((atributo) => (
                                 <div key={atributo.id} className="flex items-center gap-3">
@@ -158,13 +151,11 @@ export default function NuevoProductoUniversal() {
                         </div>
                     </div>
 
-                    {/* 3. Variantes */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
                             <ListTree size={20} className="text-indigo-500" /> Opciones / Variantes
                         </h2>
                         <p className="text-sm text-slate-500 mb-4">Solo si el cliente final debe elegir. Ej: Talle (S, M, L) o Sabor (Menta, Limón). Separá con comas.</p>
-
                         <div className="space-y-3">
                             {variantes.map((variante) => (
                                 <div key={variante.id} className="flex items-start gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 relative group">
@@ -182,13 +173,26 @@ export default function NuevoProductoUniversal() {
                     </div>
                 </div>
 
-                {/* COLUMNA DERECHA */}
                 <div className="space-y-6">
+                    {/* Multimedia Principal (Pública) */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-slate-800">
+                        <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><ImageIcon size={20} className="text-indigo-500" /> Imagen Pública</h2>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 flex items-center gap-1 mb-1">URL DE IMAGEN PRINCIPAL</label>
+                                <input type="url" value={imageUrlPrincipal} onChange={e => setImageUrlPrincipal(e.target.value)} placeholder="https://ejemplo.com/foto.jpg" className="w-full p-2 bg-slate-50 border rounded-lg text-sm" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 flex items-center gap-1 mb-1"><Video size={14} /> LINK VIDEO YOUTUBE</label>
+                                <input type="url" value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." className="w-full p-2 bg-slate-50 border rounded-lg text-sm" />
+                            </div>
+                        </div>
+                    </div>
 
-                    {/* Multimedia */}
+                    {/* Mantenemos tu UI vieja por las dudas */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                            <ImageIcon size={20} className="text-indigo-500" /> Multimedia
+                            <ImageIcon size={20} className="text-slate-400" /> Archivos Adjuntos (Local)
                         </h2>
                         <div className="mb-4">
                             <label className="block text-sm font-semibold text-slate-700 mb-2">Fotos (Hasta 5)</label>
@@ -204,22 +208,19 @@ export default function NuevoProductoUniversal() {
                                         <Plus size={24} />
                                     </div>
                                 )}
-                                {/* Overlay temporal */}
                                 <div className="absolute inset-0 bg-white/90 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                                    <p className="text-sm font-semibold text-slate-700 bg-white px-3 py-1 rounded-full border">Subida de fotos próximamente</p>
+                                    <p className="text-sm font-semibold text-slate-700 bg-white px-3 py-1 rounded-full border text-center">Usa los campos de arriba<br />para la etiqueta pública</p>
                                 </div>
                             </div>
                         </div>
                         <div className="pt-4 border-t border-slate-100">
                             <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-2">
-                                <LinkIcon size={16} /> Link a Drive o Video
+                                <LinkIcon size={16} /> Link a Drive o Manual
                             </label>
-                            <p className="text-xs text-slate-500 mb-2">Ideal para manuales pesados o videos de YouTube.</p>
                             <input type="url" value={linkExterno} onChange={(e) => setLinkExterno(e.target.value)} placeholder="https://drive.google.com/..." className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500 transition-all" />
                         </div>
                     </div>
 
-                    {/* Precios */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <h2 className="text-lg font-bold text-slate-900 mb-4">Precios</h2>
                         <div className="space-y-4">
@@ -240,24 +241,14 @@ export default function NuevoProductoUniversal() {
                         </div>
                     </div>
 
-                    {/* Botón Guardar con estado de carga */}
                     <button
                         onClick={handleGuardar}
                         disabled={loading}
                         className={`w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
                     >
-                        {loading ? (
-                            <>
-                                <Loader2 size={22} className="animate-spin" />
-                                Guardando en Supabase...
-                            </>
-                        ) : (
-                            <>
-                                <Save size={22} /> Guardar Producto
-                            </>
-                        )}
+                        {loading ? <Loader2 size={22} className="animate-spin" /> : <Save size={22} />}
+                        {loading ? 'Guardando...' : 'Guardar Producto'}
                     </button>
-
                 </div>
             </div>
         </div>
