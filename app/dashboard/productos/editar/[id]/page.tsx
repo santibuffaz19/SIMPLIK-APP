@@ -124,8 +124,6 @@ export default function EditarProductoUniversal() {
             variants_config: variantes.filter(v => v.nombre && v.valores),
             external_link: linkExterno,
             image_urls: imageUrls,
-            // LA PRIMERA FOTO ES LA PRINCIPAL
-            image_url: imageUrls[0] || null,
             video_url: videoUrl,
             custom_price_1_name: preciosExtra[0]?.nombre || null,
             custom_price_1_value: parseFloat(preciosExtra[0]?.valor) || null,
@@ -202,7 +200,6 @@ export default function EditarProductoUniversal() {
                 </div>
 
                 <div className="space-y-6">
-                    {/* CAJA MULTIMEDIA UNIFICADA */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-slate-800">
                         <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><ImageIcon size={20} className="text-indigo-500" /> Multimedia y Links</h2>
                         <div className="mb-4">

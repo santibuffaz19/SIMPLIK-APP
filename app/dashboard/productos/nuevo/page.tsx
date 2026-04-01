@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, UploadCloud, Plus, Trash2, Tag, Image as ImageIcon, Link as LinkIcon, Info, ListTree, Loader2, Video, PlusCircle } from 'lucide-react';
 
-// IMPORTANTE: Agregamos uploadImageAction para que puedas subir fotos al crearlo
 import { createProductAction, uploadImageAction } from '../actions';
 
 export default function NuevoProductoUniversal() {
@@ -28,8 +27,8 @@ export default function NuevoProductoUniversal() {
     const [variantes, setVariantes] = useState([{ id: 1, nombre: 'Opción 1', valores: '' }]);
     const [preciosExtra, setPreciosExtra] = useState<{ id: number, nombre: string, valor: string }[]>([]);
 
-    // ESTADO PARA TUS FOTOS DE LA COMPU
     const [imageUrls, setImageUrls] = useState<string[]>([]);
+    const [imagenesSlots, setImagenesSlots] = useState<number[]>([1]);
 
     const agregarAtributo = () => setAtributos([...atributos, { id: Date.now(), clave: '', valor: '' }]);
     const eliminarAtributo = (id: number) => setAtributos(atributos.filter(a => a.id !== id));
@@ -51,7 +50,10 @@ export default function NuevoProductoUniversal() {
         setPreciosExtra(preciosExtra.map(p => p.id === id ? { ...p, [campo]: valor } : p));
     };
 
-    // FUNCION PARA SUBIR FOTOS DESDE LA PC
+    const agregarRanuraImagen = () => {
+        if (imagenesSlots.length < 5) setImagenesSlots([...imagenesSlots, Date.now()]);
+    };
+
     const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -92,8 +94,6 @@ export default function NuevoProductoUniversal() {
             variants_config: variantes.filter(v => v.nombre && v.valores),
             external_link: linkExterno,
             image_urls: imageUrls,
-            // LA PRIMERA FOTO ES AUTOMÁTICAMENTE LA PRINCIPAL
-            image_url: imageUrls[0] || null,
             video_url: videoUrl,
             custom_price_1_name: preciosExtra[0]?.nombre || null,
             custom_price_1_value: parseFloat(preciosExtra[0]?.valor) || null,
@@ -161,7 +161,6 @@ export default function NuevoProductoUniversal() {
                         <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
                             <Info size={20} className="text-indigo-500" /> Ficha Técnica (Datos Fijos)
                         </h2>
-                        <p className="text-sm text-slate-500 mb-4">Datos que no cambian. Ej: Marca, Peso, Garantía, Vencimiento.</p>
                         <div className="space-y-3">
                             {atributos.map((atributo) => (
                                 <div key={atributo.id} className="flex items-center gap-3">
@@ -180,7 +179,6 @@ export default function NuevoProductoUniversal() {
                         <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
                             <ListTree size={20} className="text-indigo-500" /> Opciones / Variantes
                         </h2>
-                        <p className="text-sm text-slate-500 mb-4">Solo si el cliente final debe elegir. Ej: Talle o Sabor. Separá con comas.</p>
                         <div className="space-y-3">
                             {variantes.map((variante) => (
                                 <div key={variante.id} className="flex items-start gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 relative group">
@@ -199,7 +197,6 @@ export default function NuevoProductoUniversal() {
                 </div>
 
                 <div className="space-y-6">
-                    {/* CAJA MULTIMEDIA UNIFICADA */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-slate-800">
                         <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><ImageIcon size={20} className="text-indigo-500" /> Multimedia y Links</h2>
                         <div className="mb-4">
@@ -226,7 +223,7 @@ export default function NuevoProductoUniversal() {
                             </div>
                             <div>
                                 <label className="text-xs font-bold text-slate-500 flex items-center gap-1 mb-1"><LinkIcon size={14} /> LINK EXTERNO (DRIVE)</label>
-                                <input type="url" value={linkExterno} onChange={(e) => setLinkExterno(e.target.value)} placeholder="https://drive.google.com/..." className="w-full p-2 bg-slate-50 border rounded-lg text-sm outline-none focus:border-indigo-500 transition-all" />
+                                <input type="url" value={linkExterno} onChange={e => setLinkExterno(e.target.value)} placeholder="https://drive.google.com/..." className="w-full p-2 bg-slate-50 border rounded-lg text-sm outline-none focus:border-indigo-500 transition-all" />
                             </div>
                         </div>
                     </div>
