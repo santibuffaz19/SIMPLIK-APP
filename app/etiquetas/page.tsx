@@ -84,13 +84,22 @@ export default function GeneradorEtiquetas() {
                         <PDFDownloadLink
                             document={<LabelPDF
                                 productName={productName}
-                                price={price}
+                                price={Number(price) || 0} // CORRECCIÓN: Convertimos el precio a número
                                 qrCodeData={qrBase64}
                                 widthMm={width}
                                 heightMm={height}
+                                // CORRECCIÓN: Se envían todas las props obligatorias por defecto
+                                sku="12345"
+                                layout="qr-right"
+                                showPrice={true}
+                                showSku={true}
+                                showName={true}
+                                logoBase64={null}
+                                promoText=""
+                                extraNote=""
                             />}
                             fileName={`etiqueta-${productName.replace(' ', '-')}.pdf`}
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded shadow transition-colors"
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded shadow transition-colors inline-block"
                         >
                             {({ loading }) => (loading ? 'Generando documento...' : 'Descargar PDF (Listo para Zebra)')}
                         </PDFDownloadLink>
