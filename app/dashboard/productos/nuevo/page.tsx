@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, UploadCloud, Plus, Trash2, Tag, Image as ImageIcon, Link as LinkIcon, Info, ListTree, Loader2, Video } from 'lucide-react';
+import { ArrowLeft, Save, UploadCloud, Plus, Trash2, Tag, Image as ImageIcon, Link as LinkIcon, Info, ListTree, Loader2, Video, PlusCircle } from 'lucide-react';
 
 import { createProductAction } from '../actions';
 
@@ -21,13 +21,15 @@ export default function NuevoProductoUniversal() {
     const [precioEfectivo, setPrecioEfectivo] = useState('');
     const [linkExterno, setLinkExterno] = useState('');
 
-    // NUEVOS CAMPOS PARA LA VISTA PÚBLICA / ETIQUETAS
     const [imageUrlPrincipal, setImageUrlPrincipal] = useState('');
     const [videoUrl, setVideoUrl] = useState('');
 
     const [atributos, setAtributos] = useState([{ id: 1, clave: 'Marca', valor: '' }]);
     const [variantes, setVariantes] = useState([{ id: 1, nombre: 'Opción 1', valores: '' }]);
     const [imagenesSlots, setImagenesSlots] = useState<number[]>([1]);
+
+    // INYECCIÓN QUIRÚRGICA: Estado para los precios extra
+    const [preciosExtra, setPreciosExtra] = useState<{ id: number, nombre: string, valor: string }[]>([]);
 
     const agregarAtributo = () => setAtributos([...atributos, { id: Date.now(), clave: '', valor: '' }]);
     const eliminarAtributo = (id: number) => setAtributos(atributos.filter(a => a.id !== id));
@@ -43,6 +45,15 @@ export default function NuevoProductoUniversal() {
 
     const agregarRanuraImagen = () => {
         if (imagenesSlots.length < 5) setImagenesSlots([...imagenesSlots, Date.now()]);
+    };
+
+    // INYECCIÓN QUIRÚRGICA: Funciones para manejar los precios extra
+    const agregarPrecioExtra = () => {
+        if (preciosExtra.length < 2) setPreciosExtra([...preciosExtra, { id: Date.now(), nombre: '', valor: '' }]);
+    };
+    const eliminarPrecioExtra = (id: number) => setPreciosExtra(preciosExtra.filter(p => p.id !== id));
+    const actualizarPrecioExtra = (id: number, campo: 'nombre' | 'valor', valor: string) => {
+        setPreciosExtra(preciosExtra.map(p => p.id === id ? { ...p, [campo]: valor } : p));
     };
 
     const handleGuardar = async () => {
@@ -66,9 +77,13 @@ export default function NuevoProductoUniversal() {
             variants_config: variantes.filter(v => v.nombre && v.valores),
             external_link: linkExterno,
             image_urls: [],
-            // Guardamos las URLs para la página del QR
             image_url: imageUrlPrincipal,
-            video_url: videoUrl
+            video_url: videoUrl,
+            // INYECCIÓN QUIRÚRGICA: Guardado de los precios extra
+            custom_price_1_name: preciosExtra[0]?.nombre || null,
+            custom_price_1_value: parseFloat(preciosExtra[0]?.valor) || null,
+            custom_price_2_name: preciosExtra[1]?.nombre || null,
+            custom_price_2_value: parseFloat(preciosExtra[1]?.valor) || null,
         };
 
         const result = await createProductAction(productData);
@@ -174,7 +189,6 @@ export default function NuevoProductoUniversal() {
                 </div>
 
                 <div className="space-y-6">
-                    {/* Multimedia Principal (Pública) */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-slate-800">
                         <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><ImageIcon size={20} className="text-indigo-500" /> Imagen Pública</h2>
                         <div className="space-y-4">
@@ -189,7 +203,6 @@ export default function NuevoProductoUniversal() {
                         </div>
                     </div>
 
-                    {/* Mantenemos tu UI vieja por las dudas */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
                             <ImageIcon size={20} className="text-slate-400" /> Archivos Adjuntos (Local)
@@ -213,7 +226,7 @@ export default function NuevoProductoUniversal() {
                                 </div>
                             </div>
                         </div>
-                        <div className="pt-4 border-t border-slate-100">
+                        <div className="pt-4 border-t">
                             <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-2">
                                 <LinkIcon size={16} /> Link a Drive o Manual
                             </label>
@@ -237,6 +250,25 @@ export default function NuevoProductoUniversal() {
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 font-medium">$</span>
                                     <input type="number" value={precioEfectivo} onChange={(e) => setPrecioEfectivo(e.target.value)} className="w-full pl-8 pr-4 py-3 bg-emerald-50/50 border border-emerald-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 font-medium text-lg text-emerald-700 transition-all" />
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* INYECCIÓN QUIRÚRGICA: UI de Precios Extra */}
+                        <div className="pt-6 mt-6 border-t border-slate-100">
+                            <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">Precios Especiales (Opcional)</h3>
+                            <div className="space-y-3">
+                                {preciosExtra.map((precio) => (
+                                    <div key={precio.id} className="flex items-center gap-2">
+                                        <input type="text" placeholder="Ej: Mayorista" value={precio.nombre} onChange={(e) => actualizarPrecioExtra(precio.id, 'nombre', e.target.value)} className="w-1/2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500" />
+                                        <input type="number" placeholder="Valor $" value={precio.valor} onChange={(e) => actualizarPrecioExtra(precio.id, 'valor', e.target.value)} className="w-1/2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500" />
+                                        <button onClick={() => eliminarPrecioExtra(precio.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                                    </div>
+                                ))}
+                                {preciosExtra.length < 2 && (
+                                    <button type="button" onClick={agregarPrecioExtra} className="text-sm font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1 mt-2">
+                                        <PlusCircle size={16} /> Agregar precio extra
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

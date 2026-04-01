@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import {
     ArrowLeft, Save, UploadCloud, Plus, Trash2, Tag,
-    Image as ImageIcon, Link as LinkIcon, Info, ListTree, Loader2, Video
+    Image as ImageIcon, Link as LinkIcon, Info, ListTree, Loader2, Video, PlusCircle
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { updateProductAction, uploadImageAction } from '../../actions';
@@ -30,9 +30,11 @@ export default function EditarProductoUniversal() {
     const [variantes, setVariantes] = useState<any[]>([]);
     const [imageUrls, setImageUrls] = useState<string[]>([]);
 
-    // NUEVOS CAMPOS PARA VISTA PÚBLICA
     const [imageUrlPrincipal, setImageUrlPrincipal] = useState('');
     const [videoUrl, setVideoUrl] = useState('');
+
+    // INYECCIÓN QUIRÚRGICA: Estado
+    const [preciosExtra, setPreciosExtra] = useState<{ id: number, nombre: string, valor: string }[]>([]);
 
     useEffect(() => {
         async function loadProduct() {
@@ -61,6 +63,12 @@ export default function EditarProductoUniversal() {
 
             setImageUrlPrincipal(data.image_url || '');
             setVideoUrl(data.video_url || '');
+
+            // INYECCIÓN QUIRÚRGICA: Leer de la DB
+            const extras = [];
+            if (data.custom_price_1_name) extras.push({ id: 1, nombre: data.custom_price_1_name, valor: data.custom_price_1_value?.toString() || '' });
+            if (data.custom_price_2_name) extras.push({ id: 2, nombre: data.custom_price_2_name, valor: data.custom_price_2_value?.toString() || '' });
+            setPreciosExtra(extras);
 
             setLoadingPage(false);
         }
@@ -99,6 +107,15 @@ export default function EditarProductoUniversal() {
         setVariantes(variantes.map(v => v.id === idVar ? { ...v, [campo]: val } : v));
     };
 
+    // INYECCIÓN QUIRÚRGICA: Handlers
+    const agregarPrecioExtra = () => {
+        if (preciosExtra.length < 2) setPreciosExtra([...preciosExtra, { id: Date.now(), nombre: '', valor: '' }]);
+    };
+    const eliminarPrecioExtra = (id: number) => setPreciosExtra(preciosExtra.filter(p => p.id !== id));
+    const actualizarPrecioExtra = (id: number, campo: 'nombre' | 'valor', valor: string) => {
+        setPreciosExtra(preciosExtra.map(p => p.id === id ? { ...p, [campo]: valor } : p));
+    };
+
     const handleActualizar = async () => {
         setErrorStatus(null);
         setSaving(true);
@@ -115,7 +132,12 @@ export default function EditarProductoUniversal() {
             external_link: linkExterno,
             image_urls: imageUrls,
             image_url: imageUrlPrincipal,
-            video_url: videoUrl
+            video_url: videoUrl,
+            // INYECCIÓN QUIRÚRGICA: Guardar en DB
+            custom_price_1_name: preciosExtra[0]?.nombre || null,
+            custom_price_1_value: parseFloat(preciosExtra[0]?.valor) || null,
+            custom_price_2_name: preciosExtra[1]?.nombre || null,
+            custom_price_2_value: parseFloat(preciosExtra[1]?.valor) || null,
         };
 
         const result = await updateProductAction(id as string, updatedData);
@@ -146,7 +168,7 @@ export default function EditarProductoUniversal() {
                         <div className="space-y-4">
                             <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre del producto" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500" />
                             <div className="grid grid-cols-2 gap-4">
-                                <input type="text" value={sku} onChange={e => setSku(e.target.value)} placeholder="SKU / Código" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" />
+                                <input type="text" value={sku} onChange={e => setSku(e.target.value)} placeholder="SKU / Código" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-mono text-sm outline-none" />
                                 <input type="text" value={categoria} onChange={e => setCategoria(e.target.value)} placeholder="Categoría" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" />
                             </div>
                             <textarea rows={3} value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Descripción para el cliente..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none resize-none" />
@@ -166,10 +188,27 @@ export default function EditarProductoUniversal() {
                             <button onClick={agregarAtributo} className="text-indigo-600 font-bold text-sm flex items-center gap-1"><Plus size={16} /> Agregar Atributo</button>
                         </div>
                     </div>
+
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><ListTree size={20} className="text-indigo-500" /> Opciones / Variantes</h2>
+                        <div className="space-y-3 mt-4">
+                            {variantes.map((variante: any) => (
+                                <div key={variante.id} className="flex items-start gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 relative group">
+                                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <input type="text" placeholder="Tipo (Ej: Color)" value={variante.nombre} onChange={e => actualizarVariante(variante.id, 'nombre', e.target.value)} className="px-3 py-2 border border-slate-200 bg-white rounded-lg text-sm outline-none" />
+                                        <input type="text" placeholder="Valores separados por coma" value={variante.valores} onChange={e => actualizarVariante(variante.id, 'valores', e.target.value)} className="md:col-span-2 px-3 py-2 border border-slate-200 bg-white rounded-lg text-sm outline-none" />
+                                    </div>
+                                    <button onClick={() => setVariantes(variantes.filter(v => v.id !== variante.id))} className="text-red-400 p-2 mt-0.5"><Trash2 size={18} /></button>
+                                </div>
+                            ))}
+                            <button onClick={agregarVariante} className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-medium hover:border-indigo-500 hover:text-indigo-600 transition-colors flex items-center justify-center gap-2 mt-2">
+                                <Plus size={18} /> Agregar grupo de opciones
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="space-y-6">
-                    {/* Campos para la página pública */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-slate-800">
                         <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><ImageIcon size={20} className="text-indigo-500" /> Imagen Pública</h2>
                         <div className="space-y-4">
@@ -184,7 +223,6 @@ export default function EditarProductoUniversal() {
                         </div>
                     </div>
 
-                    {/* Tu upload local anterior */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-slate-800">
                         <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><ImageIcon size={20} className="text-slate-400" /> Adjuntos Locales</h2>
                         <div className="grid grid-cols-3 gap-2 mb-4">
@@ -219,6 +257,25 @@ export default function EditarProductoUniversal() {
                                 <input type="number" value={precioEfectivo} onChange={e => setPrecioEfectivo(e.target.value)} className="w-full p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-lg font-bold text-emerald-700" />
                             </div>
                         </div>
+
+                        {/* INYECCIÓN QUIRÚRGICA: UI de Precios Extra */}
+                        <div className="pt-6 mt-6 border-t border-slate-100">
+                            <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">Precios Especiales (Opcional)</h3>
+                            <div className="space-y-3">
+                                {preciosExtra.map((precio) => (
+                                    <div key={precio.id} className="flex items-center gap-2">
+                                        <input type="text" placeholder="Ej: Cuenta DNI" value={precio.nombre} onChange={(e) => actualizarPrecioExtra(precio.id, 'nombre', e.target.value)} className="w-1/2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500" />
+                                        <input type="number" placeholder="Valor $" value={precio.valor} onChange={(e) => actualizarPrecioExtra(precio.id, 'valor', e.target.value)} className="w-1/2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500" />
+                                        <button onClick={() => eliminarPrecioExtra(precio.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                                    </div>
+                                ))}
+                                {preciosExtra.length < 2 && (
+                                    <button type="button" onClick={agregarPrecioExtra} className="text-sm font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1 mt-2">
+                                        <PlusCircle size={16} /> Agregar precio extra
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
                     <button
@@ -227,7 +284,7 @@ export default function EditarProductoUniversal() {
                         className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                         {saving ? <Loader2 className="animate-spin" /> : <Save size={20} />}
-                        Guardar Cambios.
+                        Guardar Cambios
                     </button>
                 </div>
             </div>
