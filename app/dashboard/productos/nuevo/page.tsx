@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, UploadCloud, Plus, Trash2, Tag, Image as ImageIcon, Link as LinkIcon, Info, ListTree, Loader2, Video, PlusCircle } from 'lucide-react';
 
-import { createProductAction } from '../actions';
+// IMPORTANTE: Agregamos uploadImageAction para que puedas subir fotos al crearlo
+import { createProductAction, uploadImageAction } from '../actions';
 
 export default function NuevoProductoUniversal() {
     const router = useRouter();
 
     const [loading, setLoading] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const [errorStatus, setErrorStatus] = useState<string | null>(null);
 
     const [nombre, setNombre] = useState('');
@@ -20,16 +22,14 @@ export default function NuevoProductoUniversal() {
     const [precioLista, setPrecioLista] = useState('');
     const [precioEfectivo, setPrecioEfectivo] = useState('');
     const [linkExterno, setLinkExterno] = useState('');
-
-    const [imageUrlPrincipal, setImageUrlPrincipal] = useState('');
     const [videoUrl, setVideoUrl] = useState('');
 
     const [atributos, setAtributos] = useState([{ id: 1, clave: 'Marca', valor: '' }]);
     const [variantes, setVariantes] = useState([{ id: 1, nombre: 'Opción 1', valores: '' }]);
-    const [imagenesSlots, setImagenesSlots] = useState<number[]>([1]);
-
-    // INYECCIÓN QUIRÚRGICA: Estado para los precios extra
     const [preciosExtra, setPreciosExtra] = useState<{ id: number, nombre: string, valor: string }[]>([]);
+
+    // ESTADO PARA TUS FOTOS DE LA COMPU
+    const [imageUrls, setImageUrls] = useState<string[]>([]);
 
     const agregarAtributo = () => setAtributos([...atributos, { id: Date.now(), clave: '', valor: '' }]);
     const eliminarAtributo = (id: number) => setAtributos(atributos.filter(a => a.id !== id));
@@ -43,17 +43,32 @@ export default function NuevoProductoUniversal() {
         setVariantes(variantes.map(v => v.id === id ? { ...v, [campo]: valor } : v));
     };
 
-    const agregarRanuraImagen = () => {
-        if (imagenesSlots.length < 5) setImagenesSlots([...imagenesSlots, Date.now()]);
-    };
-
-    // INYECCIÓN QUIRÚRGICA: Funciones para manejar los precios extra
     const agregarPrecioExtra = () => {
         if (preciosExtra.length < 2) setPreciosExtra([...preciosExtra, { id: Date.now(), nombre: '', valor: '' }]);
     };
     const eliminarPrecioExtra = (id: number) => setPreciosExtra(preciosExtra.filter(p => p.id !== id));
     const actualizarPrecioExtra = (id: number, campo: 'nombre' | 'valor', valor: string) => {
         setPreciosExtra(preciosExtra.map(p => p.id === id ? { ...p, [campo]: valor } : p));
+    };
+
+    // FUNCION PARA SUBIR FOTOS DESDE LA PC
+    const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await uploadImageAction(formData);
+        if (res.success && res.url) {
+            setImageUrls(prev => [...prev, res.url]);
+        } else {
+            alert("Error al subir la imagen: " + res.error);
+        }
+        setUploading(false);
+    };
+
+    const eliminarImagen = (url: string) => {
+        setImageUrls(imageUrls.filter(img => img !== url));
     };
 
     const handleGuardar = async () => {
@@ -76,10 +91,10 @@ export default function NuevoProductoUniversal() {
             technical_specs: atributos.filter(a => a.clave && a.valor),
             variants_config: variantes.filter(v => v.nombre && v.valores),
             external_link: linkExterno,
-            image_urls: [],
-            image_url: imageUrlPrincipal,
+            image_urls: imageUrls,
+            // LA PRIMERA FOTO ES AUTOMÁTICAMENTE LA PRINCIPAL
+            image_url: imageUrls[0] || null,
             video_url: videoUrl,
-            // INYECCIÓN QUIRÚRGICA: Guardado de los precios extra
             custom_price_1_name: preciosExtra[0]?.nombre || null,
             custom_price_1_value: parseFloat(preciosExtra[0]?.valor) || null,
             custom_price_2_name: preciosExtra[1]?.nombre || null,
@@ -133,11 +148,6 @@ export default function NuevoProductoUniversal() {
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-1">Categoría</label>
                                     <input list="categorias-sugeridas" value={categoria} onChange={(e) => setCategoria(e.target.value)} placeholder="Escribí o elegí una..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all" />
-                                    <datalist id="categorias-sugeridas">
-                                        <option value="Electrónica" />
-                                        <option value="Herramientas" />
-                                        <option value="Hogar" />
-                                    </datalist>
                                 </div>
                             </div>
                             <div>
@@ -170,7 +180,7 @@ export default function NuevoProductoUniversal() {
                         <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
                             <ListTree size={20} className="text-indigo-500" /> Opciones / Variantes
                         </h2>
-                        <p className="text-sm text-slate-500 mb-4">Solo si el cliente final debe elegir. Ej: Talle (S, M, L) o Sabor (Menta, Limón). Separá con comas.</p>
+                        <p className="text-sm text-slate-500 mb-4">Solo si el cliente final debe elegir. Ej: Talle o Sabor. Separá con comas.</p>
                         <div className="space-y-3">
                             {variantes.map((variante) => (
                                 <div key={variante.id} className="flex items-start gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 relative group">
@@ -189,54 +199,41 @@ export default function NuevoProductoUniversal() {
                 </div>
 
                 <div className="space-y-6">
+                    {/* CAJA MULTIMEDIA UNIFICADA */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-slate-800">
-                        <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><ImageIcon size={20} className="text-indigo-500" /> Imagen Pública</h2>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 flex items-center gap-1 mb-1">URL DE IMAGEN PRINCIPAL</label>
-                                <input type="url" value={imageUrlPrincipal} onChange={e => setImageUrlPrincipal(e.target.value)} placeholder="https://ejemplo.com/foto.jpg" className="w-full p-2 bg-slate-50 border rounded-lg text-sm" />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 flex items-center gap-1 mb-1"><Video size={14} /> LINK VIDEO YOUTUBE</label>
-                                <input type="url" value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." className="w-full p-2 bg-slate-50 border rounded-lg text-sm" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                            <ImageIcon size={20} className="text-slate-400" /> Archivos Adjuntos (Local)
-                        </h2>
+                        <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><ImageIcon size={20} className="text-indigo-500" /> Multimedia y Links</h2>
                         <div className="mb-4">
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">Fotos (Hasta 5)</label>
-                            <div className="grid grid-cols-3 gap-2 relative">
-                                {imagenesSlots.map((slot, index) => (
-                                    <div key={slot} className={`border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:bg-slate-50 hover:border-indigo-400 cursor-pointer transition-colors ${index === 0 ? 'col-span-3 aspect-[21/9] py-8' : 'aspect-square'}`}>
-                                        <UploadCloud size={index === 0 ? 28 : 20} className="mb-1" />
-                                        {index === 0 && <span className="text-xs font-medium">Foto Principal</span>}
+                            <label className="block text-sm font-semibold text-slate-700 mb-2">Fotos Locales (Hasta 5)</label>
+                            <div className="grid grid-cols-3 gap-2">
+                                {imageUrls.map((url, i) => (
+                                    <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200">
+                                        <img src={url} className="w-full h-full object-cover" alt="Producto" />
+                                        <button onClick={() => eliminarImagen(url)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full"><Trash2 size={12} /></button>
                                     </div>
                                 ))}
-                                {imagenesSlots.length < 5 && (
-                                    <div onClick={agregarRanuraImagen} className="border-2 border-slate-200 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500 hover:text-indigo-600 cursor-pointer aspect-square transition-colors">
-                                        <Plus size={24} />
-                                    </div>
+                                {imageUrls.length < 5 && (
+                                    <label className="aspect-square border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:bg-slate-50 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
+                                        {uploading ? <Loader2 className="animate-spin" size={20} /> : <Plus size={20} />}
+                                        <input type="file" className="hidden" onChange={handleUploadImage} accept="image/*" />
+                                    </label>
                                 )}
-                                <div className="absolute inset-0 bg-white/90 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                                    <p className="text-sm font-semibold text-slate-700 bg-white px-3 py-1 rounded-full border text-center">Usa los campos de arriba<br />para la etiqueta pública</p>
-                                </div>
                             </div>
                         </div>
-                        <div className="pt-4 border-t">
-                            <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-2">
-                                <LinkIcon size={16} /> Link a Drive o Manual
-                            </label>
-                            <input type="url" value={linkExterno} onChange={(e) => setLinkExterno(e.target.value)} placeholder="https://drive.google.com/..." className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500 transition-all" />
+                        <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 flex items-center gap-1 mb-1"><Video size={14} /> LINK VIDEO YOUTUBE</label>
+                                <input type="url" value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." className="w-full p-2 bg-slate-50 border rounded-lg text-sm outline-none focus:border-indigo-500 transition-all" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 flex items-center gap-1 mb-1"><LinkIcon size={14} /> LINK EXTERNO (DRIVE)</label>
+                                <input type="url" value={linkExterno} onChange={(e) => setLinkExterno(e.target.value)} placeholder="https://drive.google.com/..." className="w-full p-2 bg-slate-50 border rounded-lg text-sm outline-none focus:border-indigo-500 transition-all" />
+                            </div>
                         </div>
                     </div>
 
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h2 className="text-lg font-bold text-slate-900 mb-4">Precios</h2>
-                        <div className="space-y-4">
+                        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2"><Tag size={20} className="text-indigo-500" /> Precios</h2>
+                        <div className="space-y-4 mb-6">
                             <div>
                                 <label className="block text-sm font-semibold text-slate-700 mb-1">Precio de Lista / Tarjetas *</label>
                                 <div className="relative">
@@ -253,8 +250,7 @@ export default function NuevoProductoUniversal() {
                             </div>
                         </div>
 
-                        {/* INYECCIÓN QUIRÚRGICA: UI de Precios Extra */}
-                        <div className="pt-6 mt-6 border-t border-slate-100">
+                        <div className="pt-6 border-t border-slate-100">
                             <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">Precios Especiales (Opcional)</h3>
                             <div className="space-y-3">
                                 {preciosExtra.map((precio) => (

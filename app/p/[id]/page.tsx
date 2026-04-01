@@ -33,10 +33,13 @@ export default function PaginaProductoPublico() {
     };
 
     const media: any[] = [];
-    if (product.image_url) media.push({ type: 'image', url: product.image_url });
+    // Para que no se repitan imágenes si image_url está dentro de image_urls
     if (product.image_urls && product.image_urls.length > 0) {
         product.image_urls.forEach((url: string) => media.push({ type: 'image', url }));
+    } else if (product.image_url) {
+        media.push({ type: 'image', url: product.image_url });
     }
+
     if (product.video_url) {
         const ytId = getYoutubeId(product.video_url);
         if (ytId) media.push({ type: 'youtube', id: ytId });
@@ -55,7 +58,6 @@ export default function PaginaProductoPublico() {
         }
     };
 
-    // LÓGICA DE PRECIOS DINÁMICOS
     const hasCash = product.price_cash != null && product.price_cash > 0;
     const hasCard = product.price_installments != null && product.price_installments > 0;
 
@@ -95,8 +97,8 @@ export default function PaginaProductoPublico() {
                                         <div className="bg-indigo-500/20 p-5 rounded-full mb-3 animate-pulse">
                                             <PlayCircle size={64} className="text-indigo-400" />
                                         </div>
-                                        <h3 className="text-3xl font-black mb-2">Ver Video</h3>
-                                        <p className="text-lg text-slate-400 font-bold">Toca para reproducir</p>
+                                        <h3 className="text-3xl font-black mb-2">Ver Archivo</h3>
+                                        <p className="text-lg text-slate-400 font-bold">Toca para abrir</p>
                                     </a>
                                 )}
                             </div>
@@ -131,7 +133,7 @@ export default function PaginaProductoPublico() {
                     </div>
                     <h1 className="text-4xl font-black text-slate-950 leading-tight tracking-tight">{product.name}</h1>
                     {product.description && (
-                        <p className="text-base text-slate-600 font-bold leading-snug line-clamp-3 mt-1">
+                        <p className="text-base text-slate-600 font-bold leading-snug mt-1 whitespace-pre-wrap">
                             {product.description}
                         </p>
                     )}
