@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Loader2, Save, Upload, X, Building2, Eye, ShieldCheck, MessageCircle } from 'lucide-react';
+// IMPORTANTE: Asegurate de que esta ruta apunte bien a tu archivo actions.ts
 import { uploadImageAction } from '../productos/actions';
 
 export default function ConfiguracionPage() {
@@ -44,22 +45,33 @@ export default function ConfiguracionPage() {
         fetchSettings();
     }, []);
 
+    // NUEVO ESCUDO: Try/Catch para que la ruedita nunca quede infinita
     const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         setUploadingLogo(true);
-        const formData = new FormData();
-        formData.append('file', file);
 
-        const res = await uploadImageAction(formData);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
 
-        if (res.success && res.url) {
-            setBusinessLogo(res.url);
-        } else {
-            alert("Error al subir el logo: " + res.error);
+            const res = await uploadImageAction(formData);
+
+            if (res && res.success && res.url) {
+                setBusinessLogo(res.url);
+            } else {
+                alert("No se pudo subir la imagen: " + (res?.error || "Error desconocido"));
+            }
+        } catch (error) {
+            console.error("Error crítico al subir:", error);
+            alert("Hubo un corte en la conexión. Intentá de nuevo.");
+        } finally {
+            // SIEMPRE frena la ruedita, pase lo que pase
+            setUploadingLogo(false);
+            // Resetea el input para que te deje clickear la misma foto de nuevo si te equivocaste
+            e.target.value = '';
         }
-        setUploadingLogo(false);
     };
 
     const handleGuardar = async () => {
@@ -110,10 +122,7 @@ export default function ConfiguracionPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 
-                {/* COLUMNA IZQUIERDA: Formularios */}
                 <div className="md:col-span-2 space-y-8">
-
-                    {/* SECCIÓN 1: Branding */}
                     <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                         <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
                             <Building2 className="text-indigo-500" size={24} /> Identidad de Marca
@@ -186,7 +195,6 @@ export default function ConfiguracionPage() {
                         </div>
                     </section>
 
-                    {/* SECCIÓN 2: Integraciones Sutiles */}
                     <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                         <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
                             <MessageCircle className="text-emerald-500" size={24} /> Contacto
@@ -215,7 +223,6 @@ export default function ConfiguracionPage() {
                     </button>
                 </div>
 
-                {/* COLUMNA DERECHA: Previsualización */}
                 <div className="hidden md:block">
                     <div className="sticky top-8 bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl overflow-hidden relative">
                         <div className="flex items-center gap-2 mb-6 text-indigo-400 font-black uppercase text-[10px] tracking-[0.2em] border-b border-white/10 pb-4">
