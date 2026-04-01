@@ -15,8 +15,14 @@ export default function PaginaEtiquetaFinal() {
     const [qrBase64, setQrBase64] = useState('');
     const [loading, setLoading] = useState(true);
 
-    const [width, setWidth] = useState(50);
-    const [height, setHeight] = useState(25);
+    // Permitimos string vacío para que no explote al borrar
+    const [width, setWidth] = useState<number | ''>(50);
+    const [height, setHeight] = useState<number | ''>(25);
+
+    // ESTOS SON LOS ESTADOS CON RETRASO (DEBOUNCE) PARA QUE NO EXPLOTE EL PDF
+    const [debouncedWidth, setDebouncedWidth] = useState(50);
+    const [debouncedHeight, setDebouncedHeight] = useState(25);
+
     const [layout, setLayout] = useState('qr-right');
     const [showPrice, setShowPrice] = useState(true);
     const [showSku, setShowSku] = useState(true);
@@ -40,6 +46,16 @@ export default function PaginaEtiquetaFinal() {
         }
         fetchProduct();
     }, [id]);
+
+    // EL "FRENO" MAGICO: Espera 800ms después de que dejás de escribir para avisarle al PDF
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            // Solo actualizamos las medidas del PDF si son mayores a 10mm (evita crasheos de tamaño)
+            setDebouncedWidth(Number(width) > 10 ? Number(width) : 50);
+            setDebouncedHeight(Number(height) > 10 ? Number(height) : 25);
+        }, 800);
+        return () => clearTimeout(timer);
+    }, [width, height]);
 
     const handleLogoUpload = (e: any) => {
         const file = e.target.files?.[0];
@@ -76,9 +92,24 @@ export default function PaginaEtiquetaFinal() {
 
                     <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-xl space-y-10">
                         <div className="grid grid-cols-2 gap-10">
-                            {/* Acá le agregamos || '' al value para que no muestre el 0 y te deje borrar tranquilo */}
-                            <div><h2 className="text-[11px] font-black text-slate-400 uppercase mb-4">ANCHO (mm)</h2><input type="number" value={width || ''} onChange={e => setWidth(Number(e.target.value))} className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-bold text-xl focus:ring-2 focus:ring-indigo-500/20" /></div>
-                            <div><h2 className="text-[11px] font-black text-slate-400 uppercase mb-4">ALTO (mm)</h2><input type="number" value={height || ''} onChange={e => setHeight(Number(e.target.value))} className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-bold text-xl focus:ring-2 focus:ring-indigo-500/20" /></div>
+                            <div>
+                                <h2 className="text-[11px] font-black text-slate-400 uppercase mb-4">ANCHO (mm)</h2>
+                                <input
+                                    type="number"
+                                    value={width}
+                                    onChange={e => setWidth(e.target.value === '' ? '' : Number(e.target.value))}
+                                    className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-bold text-xl focus:ring-2 focus:ring-indigo-500/20"
+                                />
+                            </div>
+                            <div>
+                                <h2 className="text-[11px] font-black text-slate-400 uppercase mb-4">ALTO (mm)</h2>
+                                <input
+                                    type="number"
+                                    value={height}
+                                    onChange={e => setHeight(e.target.value === '' ? '' : Number(e.target.value))}
+                                    className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-bold text-xl focus:ring-2 focus:ring-indigo-500/20"
+                                />
+                            </div>
                         </div>
 
                         <div>
@@ -134,8 +165,7 @@ export default function PaginaEtiquetaFinal() {
                             <div className="flex items-center justify-center gap-3 mb-10 text-indigo-400 font-black uppercase text-[10px] tracking-[0.3em]"><Eye size={12} /> Previsualización</div>
 
                             <div className="flex justify-center mb-12">
-                                {/* Acá protegemos el div por si width o height están temporalmente vacíos */}
-                                <div style={{ width: (width || 50) * 3.8, height: (height || 25) * 3.8 }} className={`bg-white text-black flex items-center p-3 border-4 border-white/5 transition-all duration-500 shadow-2xl ${!hasContent
+                                <div style={{ width: (Number(width) || 50) * 3.8, height: (Number(height) || 25) * 3.8 }} className={`bg-white text-black flex items-center p-3 border-4 border-white/5 transition-all duration-500 shadow-2xl ${!hasContent
                                     ? (layout === 'qr-left' ? 'justify-start' : (layout === 'qr-right' ? 'justify-end' : 'justify-center'))
                                     : 'justify-center'
                                     }`}>
@@ -171,20 +201,19 @@ export default function PaginaEtiquetaFinal() {
                                 </div>
                             </div>
 
-                            {/* Acá protegemos el PDF para que no crashee si las medidas son 0 o inválidas */}
-                            {width > 0 && height > 0 ? (
-                                <PDFDownloadLink
-                                    document={<LabelPDF productName={product.name} price={product.price_installments} sku={product.sku} qrCodeData={qrBase64} widthMm={width} heightMm={height} layout={layout} showPrice={showPrice} showSku={showSku} showName={showName} logoBase64={logoBase64} promoText={showPromo ? promoText : ''} extraNote={extraNote} />}
-                                    fileName={`simplik-${product.name}.pdf`}
-                                    className="flex items-center justify-center gap-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-6 rounded-3xl transition-all shadow-xl uppercase text-xs tracking-widest active:scale-95"
-                                >
-                                    <Printer size={20} /> Descargar PDF
-                                </PDFDownloadLink>
-                            ) : (
-                                <button disabled className="w-full flex items-center justify-center gap-4 bg-white/10 text-white/50 font-black py-6 rounded-3xl uppercase text-xs tracking-widest cursor-not-allowed transition-all">
-                                    <Printer size={20} /> Ingrese una medida válida
-                                </button>
-                            )}
+                            {/* EL COMPONENTE PDF AHORA RECIBE LOS VALORES CON "RETRASO" */}
+                            <PDFDownloadLink
+                                document={<LabelPDF productName={product.name} price={product.price_installments} sku={product.sku} qrCodeData={qrBase64} widthMm={debouncedWidth} heightMm={debouncedHeight} layout={layout} showPrice={showPrice} showSku={showSku} showName={showName} logoBase64={logoBase64} promoText={showPromo ? promoText : ''} extraNote={extraNote} />}
+                                fileName={`simplik-${product.name}.pdf`}
+                                className="flex items-center justify-center gap-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-6 rounded-3xl transition-all shadow-xl uppercase text-xs tracking-widest active:scale-95"
+                            >
+                                {({ loading }) => (
+                                    <>
+                                        {loading ? <Loader2 size={20} className="animate-spin" /> : <Printer size={20} />}
+                                        {loading ? 'Generando PDF...' : 'Descargar PDF'}
+                                    </>
+                                )}
+                            </PDFDownloadLink>
                         </div>
                     </div>
                 </div>
