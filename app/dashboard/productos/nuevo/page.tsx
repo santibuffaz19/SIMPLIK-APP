@@ -31,6 +31,9 @@ export default function NuevoProductoUniversal() {
     const [imageUrls, setImageUrls] = useState<string[]>([]);
     const [imagenesSlots, setImagenesSlots] = useState<number[]>([1]);
 
+    // NUEVO ESTADO: Ocultar o mostrar logo global por defecto al crear
+    const [showOwnerLogo, setShowOwnerLogo] = useState(true);
+
     const agregarAtributo = () => setAtributos([...atributos, { id: Date.now(), clave: '', valor: '' }]);
     const eliminarAtributo = (id: number) => setAtributos(atributos.filter(a => a.id !== id));
     const actualizarAtributo = (id: number, campo: 'clave' | 'valor', valor: string) => {
@@ -99,6 +102,8 @@ export default function NuevoProductoUniversal() {
             custom_price_1_value: parseFloat(preciosExtra[0]?.valor) || null,
             custom_price_2_name: preciosExtra[1]?.nombre || null,
             custom_price_2_value: parseFloat(preciosExtra[1]?.valor) || null,
+            // Enviamos a la DB la decisión de mostrar u ocultar el logo
+            show_owner_logo_this_product: showOwnerLogo
         };
 
         const result = await createProductAction(productData);
@@ -154,6 +159,21 @@ export default function NuevoProductoUniversal() {
                                 <label className="block text-sm font-semibold text-slate-700 mb-1">Descripción Pública</label>
                                 <textarea rows={3} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Lo que leerá el cliente final al escanear el QR..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none resize-none transition-all" />
                             </div>
+                        </div>
+
+                        {/* CHECKBOX SUTIL PARA OCULTAR EL LOGO */}
+                        <div className="mt-6 pt-4 border-t border-slate-100">
+                            <label className="flex items-center gap-3 cursor-pointer group w-fit">
+                                <input
+                                    type="checkbox"
+                                    checked={showOwnerLogo}
+                                    onChange={(e) => setShowOwnerLogo(e.target.checked)}
+                                    className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                                />
+                                <span className="text-sm font-semibold text-slate-600 group-hover:text-slate-800 transition-colors">
+                                    Mostrar el logo de mi empresa en este producto
+                                </span>
+                            </label>
                         </div>
                     </div>
 
@@ -225,30 +245,24 @@ export default function NuevoProductoUniversal() {
                     </div>
 
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2"><Tag size={20} className="text-indigo-500" /> Precios</h2>
-                        <div className="space-y-4 mb-6">
+                        <h2 className="text-lg font-bold mb-4 text-slate-800 flex items-center gap-2"><Tag size={20} className="text-indigo-500" /> Precios</h2>
+                        <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-1">Precio de Lista / Tarjetas *</label>
-                                <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-medium">$</span>
-                                    <input type="number" value={precioLista} onChange={(e) => setPrecioLista(e.target.value)} className="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium text-lg transition-all" required />
-                                </div>
+                                <label className="text-xs font-bold text-slate-500">LISTA / TARJETA</label>
+                                <input type="number" value={precioLista} onChange={e => setPrecioLista(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl text-lg font-bold outline-none focus:border-indigo-500 transition-all" />
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-1">Precio Efectivo / Transferencia</label>
-                                <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 font-medium">$</span>
-                                    <input type="number" value={precioEfectivo} onChange={(e) => setPrecioEfectivo(e.target.value)} className="w-full pl-8 pr-4 py-3 bg-emerald-50/50 border border-emerald-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 font-medium text-lg text-emerald-700 transition-all" />
-                                </div>
+                                <label className="text-xs font-bold text-slate-500">EFECTIVO / TRANSF.</label>
+                                <input type="number" value={precioEfectivo} onChange={e => setPrecioEfectivo(e.target.value)} className="w-full p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-lg font-bold text-emerald-700 outline-none focus:border-emerald-500 transition-all" />
                             </div>
                         </div>
 
-                        <div className="pt-6 border-t border-slate-100">
+                        <div className="pt-6 mt-6 border-t border-slate-100">
                             <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">Precios Especiales (Opcional)</h3>
                             <div className="space-y-3">
                                 {preciosExtra.map((precio) => (
                                     <div key={precio.id} className="flex items-center gap-2">
-                                        <input type="text" placeholder="Ej: Mayorista" value={precio.nombre} onChange={(e) => actualizarPrecioExtra(precio.id, 'nombre', e.target.value)} className="w-1/2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500" />
+                                        <input type="text" placeholder="Ej: Cuenta DNI" value={precio.nombre} onChange={(e) => actualizarPrecioExtra(precio.id, 'nombre', e.target.value)} className="w-1/2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500" />
                                         <input type="number" placeholder="Valor $" value={precio.valor} onChange={(e) => actualizarPrecioExtra(precio.id, 'valor', e.target.value)} className="w-1/2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500" />
                                         <button onClick={() => eliminarPrecioExtra(precio.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
                                     </div>
