@@ -108,7 +108,8 @@ const LabelPDF: React.FC<LabelPDFProps> = ({ productName, price, sku, qrCodeData
             gap: 1,
         },
         sectionQRFlex: {
-            width: logoBase64 || showName || showPrice || showPromo || showSku || extraNote ? '42%' : '80%',
+            // CORRECCIÓN: Cambiado showPromo por promoText
+            width: logoBase64 || showName || showPrice || promoText || showSku || extraNote ? '42%' : '80%',
             height: '100%',
             justifyContent: 'center',
             alignItems: 'center',
@@ -161,7 +162,8 @@ const LabelPDF: React.FC<LabelPDFProps> = ({ productName, price, sku, qrCodeData
         }
     });
 
-    const hasInternalContent = showName || showPrice || showSku || logoBase64 || showPromo || extraNote;
+    // CORRECCIÓN: Cambiado showPromo por promoText
+    const hasInternalContent = showName || showPrice || showSku || logoBase64 || promoText || extraNote;
 
     return (
         <Document>
@@ -179,7 +181,7 @@ const LabelPDF: React.FC<LabelPDFProps> = ({ productName, price, sku, qrCodeData
                         </View>
                         <View style={dynamicStyles.sectionCenterRight}>
                             {showSku && <Text style={dynamicStyles.sku}>{sku}</Text>}
-                            {showPromo && <Text style={dynamicStyles.promoBadge}>{promoText || 'PROMO'}</Text>}
+                            {promoText && <Text style={dynamicStyles.promoBadge}>{promoText}</Text>}
                             {extraNote && <Text style={dynamicStyles.extraNote}>{extraNote}</Text>}
                         </View>
                     </View>
@@ -192,7 +194,7 @@ const LabelPDF: React.FC<LabelPDFProps> = ({ productName, price, sku, qrCodeData
                                 {showPrice && <Text style={{ ...dynamicStyles.priceCash, fontSize: fontSizePrice * 1.2 }}>${price}</Text>}
                                 {showSku && <Text style={{ ...dynamicStyles.sku, marginTop: 2 }}>{sku}</Text>}
                                 {extraNote && <Text style={{ ...dynamicStyles.extraNote, marginTop: 2 }}>{extraNote}</Text>}
-                                {showPromo && <Text style={{ ...dynamicStyles.promoBadge, paddingHorizontal: 6, fontSize: fontSizePromo * 1.1 }}>{promoText || 'PROMO'}</Text>}
+                                {promoText && <Text style={{ ...dynamicStyles.promoBadge, paddingHorizontal: 6, fontSize: fontSizePromo * 1.1 }}>{promoText}</Text>}
                             </View>
                         )}
                         <View style={dynamicStyles.sectionQRFlex}>
