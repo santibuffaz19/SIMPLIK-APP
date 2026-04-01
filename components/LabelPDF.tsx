@@ -9,7 +9,7 @@ export default function LabelPDF({
     const widthPt = widthMm * MM_TO_PT;
     const heightPt = heightMm * MM_TO_PT;
 
-    // MAGIA DE ESCALADO: Si achica la proporción, se achica todo el contenido.
+    // Escala general
     const innerScale = Math.min(widthMm / 50, heightMm / 25);
 
     const hasContent = showName || showPrice || showSku || logoBase64 || promoText || extraNote;
@@ -27,12 +27,17 @@ export default function LabelPDF({
         },
         leftSection: {
             flex: 1, flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start',
+            paddingRight: 2 * innerScale, // Aire para que el texto largo no toque el QR
         },
         rightSection: {
             flex: 1, flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end',
+            paddingLeft: 2 * innerScale, // Aire para que el texto largo no toque el QR
         },
         infoSection: {
-            flex: 1, flexDirection: 'column', justifyContent: 'center', alignItems: layout === 'qr-right' ? 'flex-start' : 'flex-end',
+            flex: 1, flexDirection: 'column', justifyContent: 'center',
+            alignItems: layout === 'qr-right' ? 'flex-start' : 'flex-end',
+            paddingRight: layout === 'qr-right' ? 3 * innerScale : 0,
+            paddingLeft: layout === 'qr-left' ? 3 * innerScale : 0,
         },
         logo: { width: 28 * innerScale, height: 12 * innerScale, objectFit: 'contain', marginBottom: 2 * innerScale },
         title: { fontSize: 7 * innerScale, fontWeight: 'bold', marginBottom: 1 * innerScale },
@@ -45,15 +50,17 @@ export default function LabelPDF({
         },
         extraNote: { fontSize: 4 * innerScale, color: '#777777', marginTop: 1 * innerScale },
         qrSection: {
-            width: !hasContent ? 'auto' : (layout === 'qr-center' ? '30%' : '42%'),
+            // PAREDES INVISIBLES: El QR ocupa exactamente este porcentaje y ni un pixel más
+            width: !hasContent ? '100%' : (layout === 'qr-center' ? '30%' : '40%'),
             height: '100%',
             justifyContent: 'center',
             alignItems: 'center',
-            paddingHorizontal: !hasContent ? 10 * innerScale : 0
         },
         qrImage: {
-            width: !hasContent ? heightPt * 0.8 : (layout === 'qr-center' ? heightPt * 0.6 : heightPt * 0.7),
-            height: !hasContent ? heightPt * 0.8 : (layout === 'qr-center' ? heightPt * 0.6 : heightPt * 0.7),
+            // Se adapta al 100% de su propia caja sin desbordarse nunca
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain'
         }
     });
 
@@ -103,6 +110,7 @@ export default function LabelPDF({
                         <QRContent />
                         {hasContent && (
                             <View style={styles.rightSection}>
+                                {showSku && sku && <Text style={styles.sku}>CÓD: {sku}</Text>}
                                 {promoText && <Text style={styles.promoBadge}>{promoText}</Text>}
                                 {extraNote && <Text style={styles.extraNote}>{extraNote}</Text>}
                             </View>
