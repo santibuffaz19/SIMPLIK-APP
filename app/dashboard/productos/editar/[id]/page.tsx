@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import {
     ArrowLeft, Save, UploadCloud, Plus, Trash2, Tag,
-    Image as ImageIcon, Link as LinkIcon, Info, ListTree, Loader2, Video, PlusCircle
+    Image as ImageIcon, Link as LinkIcon, Info, ListTree, Loader2, PlusCircle
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { updateProductAction, uploadImageAction } from '../../actions';
@@ -25,12 +25,14 @@ export default function EditarProductoUniversal() {
     const [descripcion, setDescripcion] = useState('');
     const [precioLista, setPrecioLista] = useState('');
     const [precioEfectivo, setPrecioEfectivo] = useState('');
+
+    // UN SOLO LINK PARA TODO
     const [linkExterno, setLinkExterno] = useState('');
+
     const [atributos, setAtributos] = useState<any[]>([]);
     const [variantes, setVariantes] = useState<any[]>([]);
     const [imageUrls, setImageUrls] = useState<string[]>([]);
 
-    const [videoUrl, setVideoUrl] = useState('');
     const [preciosExtra, setPreciosExtra] = useState<{ id: number, nombre: string, valor: string }[]>([]);
 
     useEffect(() => {
@@ -53,11 +55,13 @@ export default function EditarProductoUniversal() {
             setDescripcion(data.description || '');
             setPrecioLista(data.price_installments?.toString() || '');
             setPrecioEfectivo(data.price_cash?.toString() || '');
+
+            // Carga un solo link
             setLinkExterno(data.external_link || '');
+
             setAtributos(data.technical_specs || []);
             setVariantes(data.variants_config || []);
             setImageUrls(data.image_urls || []);
-            setVideoUrl(data.video_url || '');
 
             const extras = [];
             if (data.custom_price_1_name) extras.push({ id: 1, nombre: data.custom_price_1_name, valor: data.custom_price_1_value?.toString() || '' });
@@ -124,7 +128,6 @@ export default function EditarProductoUniversal() {
             variants_config: variantes.filter(v => v.nombre && v.valores),
             external_link: linkExterno,
             image_urls: imageUrls,
-            video_url: videoUrl,
             custom_price_1_name: preciosExtra[0]?.nombre || null,
             custom_price_1_value: parseFloat(preciosExtra[0]?.valor) || null,
             custom_price_2_name: preciosExtra[1]?.nombre || null,
@@ -221,12 +224,8 @@ export default function EditarProductoUniversal() {
                         </div>
                         <div className="space-y-4 pt-4 border-t border-slate-100">
                             <div>
-                                <label className="text-xs font-bold text-slate-500 flex items-center gap-1 mb-1"><Video size={14} /> LINK VIDEO YOUTUBE</label>
-                                <input type="url" value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." className="w-full p-2 bg-slate-50 border rounded-lg text-sm outline-none focus:border-indigo-500 transition-all" />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 flex items-center gap-1 mb-1"><LinkIcon size={14} /> LINK EXTERNO (DRIVE)</label>
-                                <input type="url" value={linkExterno} onChange={e => setLinkExterno(e.target.value)} placeholder="https://drive.google.com/..." className="w-full p-2 bg-slate-50 border rounded-lg text-sm outline-none focus:border-indigo-500 transition-all" />
+                                <label className="text-xs font-bold text-slate-500 flex items-center gap-1 mb-1"><LinkIcon size={14} /> LINK EXTERNO (YOUTUBE O DRIVE)</label>
+                                <input type="url" value={linkExterno} onChange={e => setLinkExterno(e.target.value)} placeholder="https://youtube.com/... o https://drive.google..." className="w-full p-2 bg-slate-50 border rounded-lg text-sm outline-none focus:border-indigo-500 transition-all" />
                             </div>
                         </div>
                     </div>

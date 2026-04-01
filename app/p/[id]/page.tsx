@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
-    Loader2, Tag, PlayCircle, ShieldCheck, Banknote, CreditCard, ListTree, Info, PlusCircle
+    Loader2, Tag, PlayCircle, ShieldCheck, Banknote, CreditCard, ListTree, Info, PlusCircle, ExternalLink
 } from 'lucide-react';
 
 export default function PaginaProductoPublico() {
@@ -33,20 +33,23 @@ export default function PaginaProductoPublico() {
     };
 
     const media: any[] = [];
-    // Para que no se repitan imágenes si image_url está dentro de image_urls
+
     if (product.image_urls && product.image_urls.length > 0) {
         product.image_urls.forEach((url: string) => media.push({ type: 'image', url }));
-    } else if (product.image_url) {
-        media.push({ type: 'image', url: product.image_url });
     }
 
-    if (product.video_url) {
-        const ytId = getYoutubeId(product.video_url);
-        if (ytId) media.push({ type: 'youtube', id: ytId });
-    }
+    // INTELIGENCIA: Leemos un solo link y decidimos qué es
     if (product.external_link) {
-        media.push({ type: 'external_video', url: product.external_link });
+        const ytId = getYoutubeId(product.external_link);
+        if (ytId) {
+            // Si tiene formato de YouTube, lo renderizamos como reproductor
+            media.push({ type: 'youtube', id: ytId });
+        } else {
+            // Si es un Drive, Excel, Web, etc., lo renderizamos como botón
+            media.push({ type: 'external_video', url: product.external_link });
+        }
     }
+
     if (media.length === 0) media.push({ type: 'image', url: 'https://placehold.co/800x600/e2e8f0/94a3b8?text=Sin+Imagen' });
 
     const handleScroll = () => {
@@ -76,7 +79,6 @@ export default function PaginaProductoPublico() {
                 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
             `}</style>
 
-            {/* CARRUSEL GIGANTE */}
             <div className="relative w-full h-[35vh] bg-slate-200 shrink-0 py-3">
                 <div
                     ref={scrollRef}
@@ -95,10 +97,10 @@ export default function PaginaProductoPublico() {
                                 {item.type === 'external_video' && (
                                     <a href={item.url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-white text-center hover:bg-slate-800 transition-colors rounded-[1.5rem]">
                                         <div className="bg-indigo-500/20 p-5 rounded-full mb-3 animate-pulse">
-                                            <PlayCircle size={64} className="text-indigo-400" />
+                                            <ExternalLink size={64} className="text-indigo-400" />
                                         </div>
                                         <h3 className="text-3xl font-black mb-2">Ver Archivo</h3>
-                                        <p className="text-lg text-slate-400 font-bold">Toca para abrir</p>
+                                        <p className="text-lg text-slate-400 font-bold">Toca para abrir link externo</p>
                                     </a>
                                 )}
                             </div>
@@ -115,7 +117,6 @@ export default function PaginaProductoPublico() {
                 )}
             </div>
 
-            {/* CONTENEDOR DE INFORMACIÓN */}
             <div className="flex-1 w-full flex flex-col px-5 pt-8 pb-6 bg-white rounded-t-[2.5rem] -mt-5 relative z-10 shadow-[0_-12px_25px_rgba(0,0,0,0.08)]">
 
                 <div className="flex flex-col gap-2 mb-6">
@@ -139,7 +140,6 @@ export default function PaginaProductoPublico() {
                     )}
                 </div>
 
-                {/* PRECIOS PRINCIPALES */}
                 <div className={`grid gap-3 mb-3 ${hasCash && hasCard ? 'grid-cols-2' : 'grid-cols-1'}`}>
                     {hasCash && (
                         <div className="bg-emerald-50 rounded-[2rem] p-5 border-2 border-emerald-200 flex flex-col justify-center items-center text-center shadow-sm">
@@ -160,7 +160,6 @@ export default function PaginaProductoPublico() {
                     )}
                 </div>
 
-                {/* PRECIOS EXTRA CUSTOMIZADOS */}
                 {extraPrices.length > 0 && (
                     <div className="flex flex-col gap-3 mb-6">
                         {extraPrices.map((ep, idx) => (
@@ -175,7 +174,6 @@ export default function PaginaProductoPublico() {
                 )}
                 {extraPrices.length === 0 && <div className="mb-6"></div>}
 
-                {/* OPCIONES */}
                 {product.variants_config && product.variants_config.length > 0 && (
                     <div className="mb-6 flex flex-col gap-3">
                         {product.variants_config.map((variante: any) => (
@@ -193,7 +191,6 @@ export default function PaginaProductoPublico() {
                     </div>
                 )}
 
-                {/* FICHA TÉCNICA */}
                 {product.technical_specs && product.technical_specs.length > 0 && (
                     <div className="mb-4">
                         <div className="bg-slate-50 rounded-2xl border-2 border-slate-200 overflow-hidden shadow-sm">
@@ -207,7 +204,6 @@ export default function PaginaProductoPublico() {
                     </div>
                 )}
 
-                {/* FOOTER VERIFICADO */}
                 <div className="mt-auto pt-4 flex items-center justify-center gap-2.5 text-slate-400">
                     <ShieldCheck size={24} className="text-emerald-500" />
                     <span className="text-xs font-black uppercase tracking-widest">Información Oficial Verificada</span>
