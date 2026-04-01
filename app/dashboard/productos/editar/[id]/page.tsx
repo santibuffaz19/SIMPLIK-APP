@@ -227,7 +227,7 @@ export default function EditarProductoUniversal() {
                         className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                         {saving ? <Loader2 className="animate-spin" /> : <Save size={20} />}
-                        Guardar Cambios
+                        Guardar Cambios.
                     </button>
                 </div>
             </div>
