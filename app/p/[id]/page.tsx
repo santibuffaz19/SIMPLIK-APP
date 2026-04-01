@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
-    Loader2, Tag, PlayCircle, ShieldCheck, Banknote, CreditCard, ListTree, Info, PlusCircle, ExternalLink
+    Loader2, Tag, PlayCircle, ShieldCheck, Banknote, CreditCard, ListTree, Info, PlusCircle, ExternalLink, X
 } from 'lucide-react';
 
 export default function PaginaProductoPublico() {
@@ -12,6 +12,10 @@ export default function PaginaProductoPublico() {
     const [product, setProduct] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [currentSlide, setCurrentSlide] = useState(0);
+
+    // NUEVO ESTADO: Para saber qué imagen está ampliada
+    const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -38,14 +42,11 @@ export default function PaginaProductoPublico() {
         product.image_urls.forEach((url: string) => media.push({ type: 'image', url }));
     }
 
-    // INTELIGENCIA: Leemos un solo link y decidimos qué es
     if (product.external_link) {
         const ytId = getYoutubeId(product.external_link);
         if (ytId) {
-            // Si tiene formato de YouTube, lo renderizamos como reproductor
             media.push({ type: 'youtube', id: ytId });
         } else {
-            // Si es un Drive, Excel, Web, etc., lo renderizamos como botón
             media.push({ type: 'external_video', url: product.external_link });
         }
     }
@@ -73,12 +74,13 @@ export default function PaginaProductoPublico() {
     }
 
     return (
-        <div className="w-full bg-slate-100 font-sans flex flex-col min-h-[100dvh] selection:bg-indigo-200 overflow-x-hidden">
+        <div className="w-full bg-slate-100 font-sans flex flex-col min-h-[100dvh] selection:bg-indigo-200 overflow-x-hidden relative">
             <style jsx global>{`
                 .hide-scrollbar::-webkit-scrollbar { display: none; }
                 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
             `}</style>
 
+            {/* CARRUSEL */}
             <div className="relative w-full h-[35vh] bg-slate-200 shrink-0 py-3">
                 <div
                     ref={scrollRef}
@@ -89,7 +91,12 @@ export default function PaginaProductoPublico() {
                         <div key={i} className="flex-none w-full h-full snap-center relative">
                             <div className="w-full h-full bg-white rounded-[2rem] shadow-lg border-2 border-slate-300 overflow-hidden flex items-center justify-center p-2">
                                 {item.type === 'image' && (
-                                    <img src={item.url} alt={`Slide ${i}`} className="w-full h-full object-contain rounded-[1.5rem]" />
+                                    <img
+                                        src={item.url}
+                                        alt={`Slide ${i}`}
+                                        className="w-full h-full object-contain rounded-[1.5rem] cursor-pointer"
+                                        onClick={() => setZoomedImage(item.url)}
+                                    />
                                 )}
                                 {item.type === 'youtube' && (
                                     <iframe className="w-full h-full rounded-[1.5rem]" src={`https://www.youtube.com/embed/${item.id}?autoplay=0&controls=1`} allowFullScreen></iframe>
@@ -117,6 +124,7 @@ export default function PaginaProductoPublico() {
                 )}
             </div>
 
+            {/* CONTENEDOR DE INFORMACIÓN */}
             <div className="flex-1 w-full flex flex-col px-5 pt-8 pb-6 bg-white rounded-t-[2.5rem] -mt-5 relative z-10 shadow-[0_-12px_25px_rgba(0,0,0,0.08)]">
 
                 <div className="flex flex-col gap-2 mb-6">
@@ -210,6 +218,27 @@ export default function PaginaProductoPublico() {
                 </div>
 
             </div>
+
+            {/* MODAL DE ZOOM (Se abre al tocar la foto) */}
+            {zoomedImage && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-2"
+                    onClick={() => setZoomedImage(null)}
+                >
+                    <button
+                        className="absolute top-6 right-6 z-50 text-white bg-white/20 p-2 rounded-full backdrop-blur-md"
+                        onClick={() => setZoomedImage(null)}
+                    >
+                        <X size={28} />
+                    </button>
+                    <img
+                        src={zoomedImage}
+                        alt="Zoomed"
+                        className="max-w-full max-h-full object-contain"
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </div>
+            )}
         </div>
     );
 }
