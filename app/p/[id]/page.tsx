@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
-    Loader2, Tag, PlayCircle, ShieldCheck, Banknote, CreditCard, ListTree, Info, PlusCircle, ExternalLink, X
+    Loader2, Tag, PlayCircle, ShieldCheck, Banknote, CreditCard, ListTree, Info, PlusCircle, ExternalLink, X, MessageCircle
 } from 'lucide-react';
 
 export default function PaginaProductoPublico() {
@@ -15,33 +15,24 @@ export default function PaginaProductoPublico() {
 
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
-    // NUEVO ESTADO: Guardamos el logo de la empresa dueña
-    const [businessLogo, setBusinessLogo] = useState<string | null>(null);
+    // ESTADOS PARA LA CONFIGURACIÓN GLOBAL
+    const [companySettings, setCompanySettings] = useState<any>(null);
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        async function fetchProduct() {
-            const { data } = await supabase.from('products').select('*').eq('id', id).single();
-            if (data) {
-                setProduct(data);
+        async function fetchData() {
+            // 1. Buscamos el producto
+            const { data: prodData } = await supabase.from('products').select('*').eq('id', id).single();
+            if (prodData) setProduct(prodData);
 
-                // INTELIGENCIA DE MARCA: Buscamos el logo de la empresa si el producto lo permite
-                if (data.user_id && data.show_owner_logo_this_product !== false) {
-                    const { data: profile } = await supabase
-                        .from('profiles')
-                        .select('business_logo_url, show_logo_globally')
-                        .eq('id', data.user_id)
-                        .single();
+            // 2. Buscamos la configuración global de la empresa
+            const { data: settingsData } = await supabase.from('company_settings').select('*').eq('id', 1).single();
+            if (settingsData) setCompanySettings(settingsData);
 
-                    if (profile && profile.business_logo_url && profile.show_logo_globally !== false) {
-                        setBusinessLogo(profile.business_logo_url);
-                    }
-                }
-            }
             setLoading(false);
         }
-        fetchProduct();
+        fetchData();
     }, [id]);
 
     if (loading) return <div className="flex h-[100dvh] w-full items-center justify-center bg-white"><Loader2 className="animate-spin text-indigo-600" size={64} /></div>;
@@ -90,13 +81,25 @@ export default function PaginaProductoPublico() {
         extraPrices.push({ name: product.custom_price_2_name, value: product.custom_price_2_value });
     }
 
+    // VERIFICACIÓN: ¿Mostramos el logo de la empresa?
+    // Debe estar activado globalmente, tener imagen, y no estar oculto en este producto específico.
+    const showBusinessLogo = companySettings?.business_logo_url &&
+        companySettings?.show_logo_globally &&
+        product?.show_owner_logo_this_product !== false;
+
+    // LINK WHATSAPP
+    const waLink = companySettings?.whatsapp_number
+        ? `https://wa.me/${companySettings.whatsapp_number.replace(/[^0-9]/g, '')}?text=Hola! Quería consultar por el producto: ${product.name} (Cód: ${product.sku || 'N/A'})`
+        : null;
+
     return (
-        <div className="w-full bg-slate-100 font-sans flex flex-col min-h-[100dvh] selection:bg-indigo-200 overflow-x-hidden relative">
+        <div className="w-full bg-slate-100 font-sans flex flex-col min-h-[100dvh] selection:bg-indigo-200 overflow-x-hidden relative pb-10">
             <style jsx global>{`
                 .hide-scrollbar::-webkit-scrollbar { display: none; }
                 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
             `}</style>
 
+            {/* CARRUSEL */}
             <div className="relative w-full h-[35vh] bg-slate-200 shrink-0 py-3">
                 <div
                     ref={scrollRef}
@@ -140,7 +143,8 @@ export default function PaginaProductoPublico() {
                 )}
             </div>
 
-            <div className="flex-1 w-full flex flex-col px-5 pt-8 pb-6 bg-white rounded-t-[2.5rem] -mt-5 relative z-10 shadow-[0_-12px_25px_rgba(0,0,0,0.08)]">
+            {/* CONTENEDOR DE INFORMACIÓN */}
+            <div className="flex-1 w-full flex flex-col px-5 pt-8 pb-8 bg-white rounded-t-[2.5rem] -mt-5 relative z-10 shadow-[0_-12px_25px_rgba(0,0,0,0.08)]">
 
                 <div className="flex flex-col gap-2 mb-6">
                     <div className="flex justify-between items-center">
@@ -227,20 +231,35 @@ export default function PaginaProductoPublico() {
                     </div>
                 )}
 
-                {/* --- NUEVA SECCIÓN DE MARCA Y FOOTER --- */}
-                <div className="mt-auto pt-8 flex flex-col items-center justify-center gap-4">
-                    {/* LOGO DE LA EMPRESA (Sutil y desaturado para no molestar) */}
-                    {businessLogo && (
-                        <div className="flex flex-col items-center justify-center gap-1.5 opacity-60">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Catálogo de</span>
-                            <img src={businessLogo} alt="Logo Empresa" className="max-h-10 max-w-[150px] object-contain grayscale-[30%]" />
-                        </div>
+                {/* --- NUEVA SECCIÓN DE INTEGRACIONES Y MARCA (SUTIL) --- */}
+                <div className="mt-12 flex flex-col items-center justify-center gap-6">
+
+                    {/* BOTÓN DE WHATSAPP */}
+                    {waLink && (
+                        <a href={waLink} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-white border border-emerald-200 shadow-sm hover:shadow-md transition-all px-6 py-3 rounded-full text-emerald-700 active:scale-95">
+                            <MessageCircle size={18} className="text-emerald-500" />
+                            <span className="text-xs font-black uppercase tracking-widest">Consultar Producto</span>
+                        </a>
                     )}
 
-                    {/* FOOTER VERIFICADO (Simplik) */}
-                    <div className="flex items-center justify-center gap-2 text-slate-400">
-                        <ShieldCheck size={20} className="text-emerald-500" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Info Verificada por Simplik</span>
+                    <div className="flex flex-col items-center gap-4">
+                        {/* LOGO DE LA EMPRESA */}
+                        {showBusinessLogo ? (
+                            <div className="flex flex-col items-center justify-center gap-1.5 opacity-60">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Catálogo de {companySettings?.company_name || 'Empresa'}</span>
+                                <img src={companySettings.business_logo_url} alt="Logo Empresa" className="max-h-12 max-w-[150px] object-contain grayscale-[20%]" />
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center gap-1 opacity-50">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Catálogo de {companySettings?.company_name || 'Empresa'}</span>
+                            </div>
+                        )}
+
+                        {/* FOOTER VERIFICADO (Simplik) */}
+                        <div className="flex items-center justify-center gap-2 text-slate-400">
+                            <ShieldCheck size={18} className="text-indigo-400" />
+                            <span className="text-[9px] font-black uppercase tracking-widest">Verificado por Simplik</span>
+                        </div>
                     </div>
                 </div>
 
