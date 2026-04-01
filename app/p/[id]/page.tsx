@@ -13,15 +13,32 @@ export default function PaginaProductoPublico() {
     const [loading, setLoading] = useState(true);
     const [currentSlide, setCurrentSlide] = useState(0);
 
-    // NUEVO ESTADO: Para saber qué imagen está ampliada
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
+    // NUEVO ESTADO: Guardamos el logo de la empresa dueña
+    const [businessLogo, setBusinessLogo] = useState<string | null>(null);
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         async function fetchProduct() {
             const { data } = await supabase.from('products').select('*').eq('id', id).single();
-            if (data) setProduct(data);
+            if (data) {
+                setProduct(data);
+
+                // INTELIGENCIA DE MARCA: Buscamos el logo de la empresa si el producto lo permite
+                if (data.user_id && data.show_owner_logo_this_product !== false) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('business_logo_url, show_logo_globally')
+                        .eq('id', data.user_id)
+                        .single();
+
+                    if (profile && profile.business_logo_url && profile.show_logo_globally !== false) {
+                        setBusinessLogo(profile.business_logo_url);
+                    }
+                }
+            }
             setLoading(false);
         }
         fetchProduct();
@@ -80,7 +97,6 @@ export default function PaginaProductoPublico() {
                 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
             `}</style>
 
-            {/* CARRUSEL */}
             <div className="relative w-full h-[35vh] bg-slate-200 shrink-0 py-3">
                 <div
                     ref={scrollRef}
@@ -124,7 +140,6 @@ export default function PaginaProductoPublico() {
                 )}
             </div>
 
-            {/* CONTENEDOR DE INFORMACIÓN */}
             <div className="flex-1 w-full flex flex-col px-5 pt-8 pb-6 bg-white rounded-t-[2.5rem] -mt-5 relative z-10 shadow-[0_-12px_25px_rgba(0,0,0,0.08)]">
 
                 <div className="flex flex-col gap-2 mb-6">
@@ -212,14 +227,25 @@ export default function PaginaProductoPublico() {
                     </div>
                 )}
 
-                <div className="mt-auto pt-4 flex items-center justify-center gap-2.5 text-slate-400">
-                    <ShieldCheck size={24} className="text-emerald-500" />
-                    <span className="text-xs font-black uppercase tracking-widest">Información Oficial Verificada</span>
+                {/* --- NUEVA SECCIÓN DE MARCA Y FOOTER --- */}
+                <div className="mt-auto pt-8 flex flex-col items-center justify-center gap-4">
+                    {/* LOGO DE LA EMPRESA (Sutil y desaturado para no molestar) */}
+                    {businessLogo && (
+                        <div className="flex flex-col items-center justify-center gap-1.5 opacity-60">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Catálogo de</span>
+                            <img src={businessLogo} alt="Logo Empresa" className="max-h-10 max-w-[150px] object-contain grayscale-[30%]" />
+                        </div>
+                    )}
+
+                    {/* FOOTER VERIFICADO (Simplik) */}
+                    <div className="flex items-center justify-center gap-2 text-slate-400">
+                        <ShieldCheck size={20} className="text-emerald-500" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Info Verificada por Simplik</span>
+                    </div>
                 </div>
 
             </div>
 
-            {/* MODAL DE ZOOM (Se abre al tocar la foto) */}
             {zoomedImage && (
                 <div
                     className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-2"

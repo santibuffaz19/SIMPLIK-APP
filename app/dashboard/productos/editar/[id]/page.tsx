@@ -26,14 +26,15 @@ export default function EditarProductoUniversal() {
     const [precioLista, setPrecioLista] = useState('');
     const [precioEfectivo, setPrecioEfectivo] = useState('');
 
-    // UN SOLO LINK PARA TODO
     const [linkExterno, setLinkExterno] = useState('');
 
     const [atributos, setAtributos] = useState<any[]>([]);
     const [variantes, setVariantes] = useState<any[]>([]);
     const [imageUrls, setImageUrls] = useState<string[]>([]);
-
     const [preciosExtra, setPreciosExtra] = useState<{ id: number, nombre: string, valor: string }[]>([]);
+
+    // NUEVO ESTADO: Ocultar o mostrar logo global por producto
+    const [showOwnerLogo, setShowOwnerLogo] = useState(true);
 
     useEffect(() => {
         async function loadProduct() {
@@ -56,7 +57,6 @@ export default function EditarProductoUniversal() {
             setPrecioLista(data.price_installments?.toString() || '');
             setPrecioEfectivo(data.price_cash?.toString() || '');
 
-            // Carga un solo link
             setLinkExterno(data.external_link || '');
 
             setAtributos(data.technical_specs || []);
@@ -67,6 +67,9 @@ export default function EditarProductoUniversal() {
             if (data.custom_price_1_name) extras.push({ id: 1, nombre: data.custom_price_1_name, valor: data.custom_price_1_value?.toString() || '' });
             if (data.custom_price_2_name) extras.push({ id: 2, nombre: data.custom_price_2_name, valor: data.custom_price_2_value?.toString() || '' });
             setPreciosExtra(extras);
+
+            // Cargamos si el usuario lo había desactivado (default true)
+            setShowOwnerLogo(data.show_owner_logo_this_product !== false);
 
             setLoadingPage(false);
         }
@@ -132,6 +135,9 @@ export default function EditarProductoUniversal() {
             custom_price_1_value: parseFloat(preciosExtra[0]?.valor) || null,
             custom_price_2_name: preciosExtra[1]?.nombre || null,
             custom_price_2_value: parseFloat(preciosExtra[1]?.valor) || null,
+
+            // Enviamos a la DB la decisión de mostrar u ocultar el logo
+            show_owner_logo_this_product: showOwnerLogo
         };
 
         const result = await updateProductAction(id as string, updatedData);
@@ -166,6 +172,21 @@ export default function EditarProductoUniversal() {
                                 <input type="text" value={categoria} onChange={e => setCategoria(e.target.value)} placeholder="Categoría" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" />
                             </div>
                             <textarea rows={3} value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Descripción para el cliente..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none resize-none" />
+                        </div>
+
+                        {/* CHECKBOX SUTIL PARA OCULTAR EL LOGO */}
+                        <div className="mt-6 pt-4 border-t border-slate-100">
+                            <label className="flex items-center gap-3 cursor-pointer group w-fit">
+                                <input
+                                    type="checkbox"
+                                    checked={showOwnerLogo}
+                                    onChange={(e) => setShowOwnerLogo(e.target.checked)}
+                                    className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                                />
+                                <span className="text-sm font-semibold text-slate-600 group-hover:text-slate-800 transition-colors">
+                                    Mostrar el logo de mi empresa en este producto
+                                </span>
+                            </label>
                         </div>
                     </div>
 
