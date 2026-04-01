@@ -1,210 +1,115 @@
-import { Page, Text, View, Document, StyleSheet, Image, Font } from '@react-pdf/renderer';
+import { Document, Page, Text, View, Image, StyleSheet } from '@react-pdf/renderer';
 
-// Registrar Fuentes para asegurar consistencia
-Font.register({
-    family: 'Sora',
-    fonts: [
-        { src: 'https://cdn.jsdelivr.net/font-sora/1.2.1/fonts/latin/sora-400.ttf', fontWeight: 400 },
-        { src: 'https://cdn.jsdelivr.net/font-sora/1.2.1/fonts/latin/sora-700.ttf', fontWeight: 700 },
-        { src: 'https://cdn.jsdelivr.net/font-sora/1.2.1/fonts/latin/sora-800.ttf', fontWeight: 800 },
-    ]
-});
+const MM_TO_PT = 2.83465;
 
-interface LabelPDFProps {
-    productName: string;
-    price: number | null;
-    sku: string | null;
-    qrCodeData: string;
-    widthMm: number;
-    heightMm: number;
-    layout: string;
-    showPrice: boolean;
-    showSku: boolean;
-    showName: boolean;
-    logoBase64: string | null;
-    promoText: string;
-    extraNote: string;
-}
+export default function LabelPDF({
+    productName, price, sku, qrCodeData, widthMm, heightMm, layout,
+    showPrice, showSku, showName, logoBase64, promoText, extraNote
+}: any) {
+    const widthPt = widthMm * MM_TO_PT;
+    const heightPt = heightMm * MM_TO_PT;
 
-const LabelPDF: React.FC<LabelPDFProps> = ({ productName, price, sku, qrCodeData, widthMm, heightMm, layout, showPrice, showSku, showName, logoBase64, promoText, extraNote }) => {
+    // MAGIA DE ESCALADO: Si achica la proporción, se achica todo el contenido.
+    const innerScale = Math.min(widthMm / 50, heightMm / 25);
 
-    // LÓGICA DE ESCALADO DINÁMICO
-    const mmToPt = 2.83465;
-    const pageWidth = widthMm * mmToPt;
-    const pageHeight = heightMm * mmToPt;
+    const hasContent = showName || showPrice || showSku || logoBase64 || promoText || extraNote;
 
-    // Normalizamos con respecto a 50x25
-    const normalizedW = widthMm / 50;
-    const normalizedH = heightMm / 25;
-    const innerScale = Math.min(normalizedW, normalizedH);
-
-    const padding = Math.max(1.5, 3 * innerScale); // Padding dinámico
-
-    // Tamaños de fuente calculados dinámicamente con un mínimo legible
-    const fontSizeTitle = Math.max(4, 7 * innerScale);
-    const fontSizePrice = Math.max(6, 14 * innerScale);
-    const fontSizeNote = Math.max(2, 4 * innerScale);
-    const fontSizePromo = Math.max(3, 5 * innerScale);
-
-    const dynamicStyles = StyleSheet.create({
+    const styles = StyleSheet.create({
         page: {
-            fontFamily: 'Sora',
-            color: '#000000',
-            width: pageWidth,
-            height: pageHeight,
-            padding: padding,
+            width: widthPt, height: heightPt,
             flexDirection: 'row',
+            backgroundColor: '#ffffff',
             alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: '#FFFFFF'
+            justifyContent: !hasContent
+                ? (layout === 'qr-left' ? 'flex-start' : (layout === 'qr-right' ? 'flex-end' : 'center'))
+                : 'center',
+            padding: 6 * innerScale,
         },
-
-        // Estructura layout centro (33/33/33)
-        flexContainerCenter: {
-            width: '100%',
-            height: '100%',
-            flexDirection: 'row',
-            alignItems: 'center',
+        leftSection: {
+            flex: 1, flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start',
         },
-        sectionCenterText: {
-            width: '33%',
-            height: '100%',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'flex-start',
-            gap: 1,
-            overflow: 'hidden'
+        rightSection: {
+            flex: 1, flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end',
         },
-        sectionCenterQR: {
-            width: '33%',
-            height: '100%',
-            justifyContent: 'center',
-            alignItems: 'center',
+        infoSection: {
+            flex: 1, flexDirection: 'column', justifyContent: 'center', alignItems: layout === 'qr-right' ? 'flex-start' : 'flex-end',
         },
-        sectionCenterRight: {
-            width: '33%',
-            height: '100%',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'flex-end',
-            textAlign: 'right',
-            gap: 1,
-            overflow: 'hidden'
-        },
-
-        // Estructura layout izq/der
-        flexContainerFlex: {
-            width: '100%',
-            height: '100%',
-            flexDirection: layout === 'qr-left' ? 'row-reverse' : 'row',
-            alignItems: 'center',
-            gap: padding,
-        },
-        sectionTextFlex: {
-            flex: 1,
-            flexDirection: 'column',
-            justifyContent: 'center',
-            overflow: 'hidden',
-            gap: 1,
-        },
-        sectionQRFlex: {
-            // CORRECCIÓN: Cambiado showPromo por promoText
-            width: logoBase64 || showName || showPrice || promoText || showSku || extraNote ? '42%' : '80%',
-            height: '100%',
-            justifyContent: 'center',
-            alignItems: 'center',
-        },
-
-        // Tipografía Dinámica
-        productName: {
-            fontSize: fontSizeTitle,
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            lineHeight: 1.1,
-            width: '100%',
-        },
-        priceCash: {
-            fontSize: fontSizePrice,
-            fontWeight: 800,
-            letterSpacing: -1,
-            lineHeight: 1,
-        },
-        extraNote: {
-            fontSize: fontSizeNote,
-            color: '#64748b',
-            lineHeight: 1.1,
-        },
-        sku: {
-            fontSize: fontSizeNote,
-            fontWeight: 800,
-            textTransform: 'uppercase',
-            opacity: 0.6,
-        },
+        logo: { width: 28 * innerScale, height: 12 * innerScale, objectFit: 'contain', marginBottom: 2 * innerScale },
+        title: { fontSize: 7 * innerScale, fontWeight: 'bold', marginBottom: 1 * innerScale },
+        sku: { fontSize: 5 * innerScale, color: '#444444' },
+        price: { fontSize: 11 * innerScale, fontWeight: 'bold' },
         promoBadge: {
-            backgroundColor: '#000000',
-            color: '#FFFFFF',
-            fontSize: fontSizePromo,
-            fontWeight: 800,
-            textTransform: 'uppercase',
-            padding: `2 ${fontSizePromo / 2.5}`,
-            borderRadius: 2,
-            marginTop: 2,
+            backgroundColor: '#000000', color: '#ffffff', fontSize: 5 * innerScale,
+            paddingHorizontal: 3 * innerScale, paddingVertical: 1 * innerScale,
+            borderRadius: 1, marginTop: 2 * innerScale, fontWeight: 'bold'
+        },
+        extraNote: { fontSize: 4 * innerScale, color: '#777777', marginTop: 1 * innerScale },
+        qrSection: {
+            width: !hasContent ? 'auto' : (layout === 'qr-center' ? '30%' : '42%'),
+            height: '100%',
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingHorizontal: !hasContent ? 10 * innerScale : 0
         },
         qrImage: {
-            height: '100%',
-            objectFit: 'contain'
-        },
-        logoImage: {
-            height: fontSizeTitle * 1.6,
-            width: 'auto',
-            objectFit: 'contain',
-            marginBottom: fontSizeTitle / 3,
+            width: !hasContent ? heightPt * 0.8 : (layout === 'qr-center' ? heightPt * 0.6 : heightPt * 0.7),
+            height: !hasContent ? heightPt * 0.8 : (layout === 'qr-center' ? heightPt * 0.6 : heightPt * 0.7),
         }
     });
 
-    // CORRECCIÓN: Cambiado showPromo por promoText
-    const hasInternalContent = showName || showPrice || showSku || logoBase64 || promoText || extraNote;
+    const InfoContent = () => (
+        <>
+            {logoBase64 && <Image src={logoBase64} style={styles.logo} />}
+            {showName && <Text style={styles.title}>{productName}</Text>}
+            {showSku && sku && <Text style={styles.sku}>CÓD: {sku}</Text>}
+            {showPrice && <Text style={styles.price}>${price}</Text>}
+            {promoText && <Text style={styles.promoBadge}>{promoText}</Text>}
+            {extraNote && <Text style={styles.extraNote}>{extraNote}</Text>}
+        </>
+    );
+
+    const QRContent = () => (
+        <View style={styles.qrSection}>
+            {qrCodeData && <Image src={qrCodeData} style={styles.qrImage} />}
+        </View>
+    );
 
     return (
         <Document>
-            <Page size={[pageWidth, pageHeight]} style={dynamicStyles.page}>
+            <Page size={[widthPt, heightPt]} style={styles.page}>
+                {layout === 'qr-left' && (
+                    <>
+                        <QRContent />
+                        {hasContent && <View style={styles.infoSection}><InfoContent /></View>}
+                    </>
+                )}
 
-                {layout === 'qr-center' && hasInternalContent ? (
-                    <View style={dynamicStyles.flexContainerCenter}>
-                        <View style={dynamicStyles.sectionCenterText}>
-                            {logoBase64 && <Image src={logoBase64} style={dynamicStyles.logoImage} />}
-                            {showName && <Text style={dynamicStyles.productName}>{productName}</Text>}
-                            {showPrice && <Text style={dynamicStyles.priceCash}>${price}</Text>}
-                        </View>
-                        <View style={dynamicStyles.sectionCenterQR}>
-                            <Image src={qrCodeData} style={dynamicStyles.qrImage} />
-                        </View>
-                        <View style={dynamicStyles.sectionCenterRight}>
-                            {showSku && <Text style={dynamicStyles.sku}>{sku}</Text>}
-                            {promoText && <Text style={dynamicStyles.promoBadge}>{promoText}</Text>}
-                            {extraNote && <Text style={dynamicStyles.extraNote}>{extraNote}</Text>}
-                        </View>
-                    </View>
-                ) : (
-                    <View style={dynamicStyles.flexContainerFlex}>
-                        {hasInternalContent && (
-                            <View style={{ ...dynamicStyles.sectionTextFlex, textAlign: layout === 'qr-right' ? 'left' : 'right', alignItems: layout === 'qr-right' ? 'flex-start' : 'flex-end' }}>
-                                {logoBase64 && <Image src={logoBase64} style={{ ...dynamicStyles.logoImage, height: fontSizeTitle * 2.1 }} />}
-                                {showName && <Text style={{ ...dynamicStyles.productName, fontSize: fontSizeTitle * 1.1 }}>{productName}</Text>}
-                                {showPrice && <Text style={{ ...dynamicStyles.priceCash, fontSize: fontSizePrice * 1.2 }}>${price}</Text>}
-                                {showSku && <Text style={{ ...dynamicStyles.sku, marginTop: 2 }}>{sku}</Text>}
-                                {extraNote && <Text style={{ ...dynamicStyles.extraNote, marginTop: 2 }}>{extraNote}</Text>}
-                                {promoText && <Text style={{ ...dynamicStyles.promoBadge, paddingHorizontal: 6, fontSize: fontSizePromo * 1.1 }}>{promoText}</Text>}
+                {layout === 'qr-right' && (
+                    <>
+                        {hasContent && <View style={styles.infoSection}><InfoContent /></View>}
+                        <QRContent />
+                    </>
+                )}
+
+                {layout === 'qr-center' && (
+                    <>
+                        {hasContent && (
+                            <View style={styles.leftSection}>
+                                {logoBase64 && <Image src={logoBase64} style={styles.logo} />}
+                                {showName && <Text style={styles.title}>{productName}</Text>}
+                                {showPrice && <Text style={styles.price}>${price}</Text>}
                             </View>
                         )}
-                        <View style={dynamicStyles.sectionQRFlex}>
-                            <Image src={qrCodeData} style={dynamicStyles.qrImage} />
-                        </View>
-                    </View>
+                        <QRContent />
+                        {hasContent && (
+                            <View style={styles.rightSection}>
+                                {promoText && <Text style={styles.promoBadge}>{promoText}</Text>}
+                                {extraNote && <Text style={styles.extraNote}>{extraNote}</Text>}
+                            </View>
+                        )}
+                    </>
                 )}
             </Page>
         </Document>
     );
-};
-
-export default LabelPDF;
+}

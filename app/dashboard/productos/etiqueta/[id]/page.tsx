@@ -47,11 +47,11 @@ export default function PaginaEtiquetaFinal() {
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            // LÍMITES DE SEGURIDAD PARA PDF (Mínimos: 25x15)
             const w = Number(width);
             const h = Number(height);
-            setDebouncedWidth(w >= 25 ? w : (w === 0 ? 50 : 25));
-            setDebouncedHeight(h >= 15 ? h : (h === 0 ? 25 : 15));
+            // Calculamos seguro por detrás sin molestar al usuario con puntos rojos
+            setDebouncedWidth(w > 10 ? w : 50);
+            setDebouncedHeight(h > 10 ? h : 25);
         }, 800);
         return () => clearTimeout(timer);
     }, [width, height]);
@@ -76,28 +76,10 @@ export default function PaginaEtiquetaFinal() {
 
     if (loading) return <div className="flex h-screen items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-indigo-600" size={40} /></div>;
 
-    // LÓGICA DE ESCALADO DE PREVISUALIZACIÓN
-    const scaleFactorPrevis = 3.8;
-    const wPrevis = Number(width) || 50;
-    const hPrevis = Number(height) || 25;
-
-    // Medidas "seguras" para la preview visual
-    const safeW = Math.max(25, wPrevis);
-    const safeH = Math.max(15, hPrevis);
-
-    // Cálculo de factor de escala base interno (basado en la proporción 50x25)
-    const normalizedW = safeW / 50;
-    const normalizedH = safeH / 25;
-    const innerScale = Math.min(normalizedW, normalizedH);
-
-    // Tamaños de fuente responsivos para la preview
-    const fontSizeTitlePrevis = Math.max(4, 7 * innerScale) * scaleFactorPrevis;
-    const fontSizePricePrevis = Math.max(6, 14 * innerScale) * scaleFactorPrevis;
-    const fontSizeNotePrevis = Math.max(2, 4 * innerScale) * scaleFactorPrevis;
-    const fontSizePromoPrevis = Math.max(3, 5 * innerScale) * scaleFactorPrevis;
-
-    // Padding responsivo
-    const paddingPrevis = Math.max(1.5, 3 * innerScale) * scaleFactorPrevis;
+    // LÓGICA DE ESCALADO SIMPLE Y SEGURA PARA LA PREVISUALIZACIÓN
+    const w = Number(width) || 50;
+    const h = Number(height) || 25;
+    const scale = Math.min(w / 50, h / 25); // Achica el diseño si cambias la proporción
 
     return (
         <div className="max-w-6xl mx-auto p-8 font-sans text-slate-800 antialiased overflow-x-hidden">
@@ -115,30 +97,22 @@ export default function PaginaEtiquetaFinal() {
                     <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-xl space-y-10">
                         <div className="grid grid-cols-2 gap-10">
                             <div>
-                                <h2 className="text-[11px] font-black text-slate-400 uppercase mb-4">ANCHO (mm) <span className="text-red-500">*</span></h2>
+                                <h2 className="text-[11px] font-black text-slate-400 uppercase mb-4">ANCHO (mm)</h2>
                                 <input
                                     type="number"
                                     value={width}
-                                    min="25"
                                     onChange={e => setWidth(e.target.value === '' ? '' : Number(e.target.value))}
-                                    placeholder="Min 25mm"
-                                    required
                                     className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-bold text-xl focus:ring-2 focus:ring-indigo-500/20"
                                 />
-                                {width && Number(width) < 25 && <p className="text-red-500 text-xs mt-1">Mínimo 25mm</p>}
                             </div>
                             <div>
-                                <h2 className="text-[11px] font-black text-slate-400 uppercase mb-4">ALTO (mm) <span className="text-red-500">*</span></h2>
+                                <h2 className="text-[11px] font-black text-slate-400 uppercase mb-4">ALTO (mm)</h2>
                                 <input
                                     type="number"
                                     value={height}
-                                    min="15"
                                     onChange={e => setHeight(e.target.value === '' ? '' : Number(e.target.value))}
-                                    placeholder="Min 15mm"
-                                    required
                                     className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-bold text-xl focus:ring-2 focus:ring-indigo-500/20"
                                 />
-                                {height && Number(height) < 15 && <p className="text-red-500 text-xs mt-1">Mínimo 15mm</p>}
                             </div>
                         </div>
 
@@ -195,53 +169,43 @@ export default function PaginaEtiquetaFinal() {
                             <div className="flex items-center justify-center gap-3 mb-10 text-indigo-400 font-black uppercase text-[10px] tracking-[0.3em]"><Eye size={12} /> Previsualización</div>
 
                             <div className="flex justify-center mb-12 relative overflow-hidden">
-                                {/* Contenedor de la Previsualización Responsiva */}
-                                <div style={{ width: safeW * scaleFactorPrevis, height: safeH * scaleFactorPrevis, padding: paddingPrevis }} className={`bg-white text-black flex items-center border-4 border-white/5 transition-all duration-300 shadow-2xl overflow-hidden ${!hasContent
-                                    ? (layout === 'qr-left' ? 'justify-start' : (layout === 'qr-right' ? 'justify-end' : 'justify-center'))
-                                    : 'justify-center'
-                                    }`}>
+                                {/* CAJA EXTERNA: Respeta la medida física que escribe el cliente */}
+                                <div style={{ width: w * 3.8, height: h * 3.8 }} className="bg-white flex items-center justify-center border-4 border-white/5 transition-all duration-300 shadow-2xl overflow-hidden">
 
-                                    {layout === 'qr-center' && hasContent ? (
-                                        <div className="flex w-full h-full items-center relative gap-1">
-                                            {/* Panel Izquierdo */}
-                                            <div className="w-[33%] h-full flex flex-col items-start justify-center text-left overflow-hidden leading-none gap-0.5">
-                                                {logoBase64 && <img src={logoBase64} style={{ height: fontSizeTitlePrevis * 1.5 }} className="w-auto object-contain mb-1" />}
-                                                {showName && <span style={{ fontSize: fontSizeTitlePrevis }} className="font-bold uppercase break-words w-full leading-tight">{product.name}</span>}
-                                                {showPrice && <span style={{ fontSize: fontSizePricePrevis }} className="font-black tracking-tighter leading-none">${product.price_installments}</span>}
-                                            </div>
-                                            {/* Panel Central (QR) */}
-                                            <div className="w-[33%] h-full flex items-center justify-center shrink-0">
-                                                {qrBase64 && <img src={qrBase64} className="h-full w-full object-contain" />}
-                                            </div>
-                                            {/* Panel Derecho */}
-                                            <div className="w-[33%] h-full flex flex-col items-end justify-center text-right overflow-hidden leading-none gap-0.5 pt-1">
-                                                {showSku && <span style={{ fontSize: fontSizeNotePrevis, opacity: 0.6 }} className="font-black uppercase tracking-widest">{product.sku}</span>}
-                                                {showPromo && <span style={{ fontSize: fontSizePromoPrevis, padding: '1px 3px' }} className="bg-black text-white rounded font-black uppercase">{promoText || 'PROMO'}</span>}
-                                                {extraNote && <span style={{ fontSize: fontSizeNotePrevis, opacity: 0.6 }} className="w-full break-words">{extraNote}</span>}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className={`flex w-full h-full items-center gap-1.5 ${layout === 'qr-left' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                            {hasContent && (
-                                                <div className={`flex-1 h-full flex flex-col justify-center overflow-hidden gap-0.5 ${layout === 'qr-right' ? 'items-start text-left' : 'items-end text-right'}`}>
-                                                    {logoBase64 && <img src={logoBase64} style={{ height: fontSizeTitlePrevis * 2 }} className="w-auto object-contain mb-2" />}
-                                                    {showName && <span style={{ fontSize: fontSizeTitlePrevis * 1.1 }} className="font-bold leading-tight uppercase w-full break-words">{product.name}</span>}
-                                                    {showPrice && <span style={{ fontSize: fontSizePricePrevis * 1.2 }} className="font-black tracking-tighter leading-none">${product.price_installments}</span>}
-                                                    {showSku && <span style={{ fontSize: fontSizeNotePrevis, opacity: 0.6, marginTop: '2px' }} className="font-black uppercase tracking-widest">{product.sku}</span>}
-                                                    {extraNote && <span style={{ fontSize: fontSizeNotePrevis, opacity: 0.6, marginTop: '2px' }} className="w-full break-words">{extraNote}</span>}
-                                                    {showPromo && <span style={{ fontSize: fontSizePromoPrevis, padding: '2px 4px', marginTop: '4px' }} className="bg-black text-white rounded font-black uppercase">{promoText || 'PROMO'}</span>}
+                                    {/* CAJA INTERNA: Tiene tu diseño original y se hace un "Zoom" para encajar perfecto */}
+                                    <div style={{ width: 190, height: 95, transform: `scale(${scale})`, transformOrigin: 'center' }} className={`text-black flex items-center p-3 w-full h-full ${!hasContent ? (layout === 'qr-left' ? 'justify-start' : (layout === 'qr-right' ? 'justify-end' : 'justify-center')) : 'justify-center'}`}>
+                                        {layout === 'qr-center' && hasContent ? (
+                                            <div className="flex w-full h-full items-center">
+                                                <div className="flex-1 flex flex-col items-start justify-center text-left p-1 overflow-hidden leading-none">
+                                                    {logoBase64 && <img src={logoBase64} className="w-6 h-4 object-contain mb-1" />}
+                                                    {showName && <span className="text-[5px] font-bold uppercase truncate w-full">{product.name}</span>}
+                                                    {showPrice && <span className="text-[10px] font-black tracking-tighter">${product.price_installments}</span>}
                                                 </div>
-                                            )}
-                                            {/* Contenedor del QR */}
-                                            <div style={{ width: hasContent ? '42%' : '80%' }} className="h-full flex items-center justify-center shrink-0">
-                                                {qrBase64 && <img src={qrBase64} style={{ height: '100%' }} className="object-contain" />}
+                                                <div className="w-[30%] flex items-center justify-center">{qrBase64 && <img src={qrBase64} className="h-full object-contain" />}</div>
+                                                <div className="flex-1 flex flex-col items-end justify-center text-right p-1 leading-none">
+                                                    {showPromo && <span className="bg-black text-white text-[4px] px-1 rounded font-black uppercase mb-1">{promoText || 'PROMO'}</span>}
+                                                    {extraNote && <span className="text-[3px] text-slate-500">{extraNote}</span>}
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        ) : (
+                                            <div className={`flex w-full h-full items-center ${layout === 'qr-left' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                                {hasContent && (
+                                                    <div className={`flex-1 flex flex-col justify-center p-1 ${layout === 'qr-right' ? 'items-start text-left' : 'items-end text-right'}`}>
+                                                        {logoBase64 && <img src={logoBase64} className="w-7 h-5 object-contain mb-2" />}
+                                                        {showName && <span className="text-[6px] font-bold leading-none uppercase mb-1">{product.name}</span>}
+                                                        {showPrice && <span className="text-[14px] font-black tracking-tighter leading-none">${product.price_installments}</span>}
+                                                        {showPromo && <span className="bg-black text-white text-[5px] px-1.5 py-0.5 rounded mt-2 font-black uppercase">{promoText || 'PROMO'}</span>}
+                                                    </div>
+                                                )}
+                                                <div className={`${!hasContent ? 'w-auto' : 'w-[45%]'} h-full flex items-center justify-center`}>
+                                                    {qrBase64 && <img src={qrBase64} style={{ height: '80%' }} className="object-contain" />}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* EL COMPONENTE PDF RECIBE VALORES CON "RETRASO" Y GARANTIZADOS MIN 25X15 */}
                             {product && (
                                 <PDFDownloadLink
                                     document={<LabelPDF productName={product.name} price={product.price_installments} sku={product.sku} qrCodeData={qrBase64} widthMm={debouncedWidth} heightMm={debouncedHeight} layout={layout} showPrice={showPrice} showSku={showSku} showName={showName} logoBase64={logoBase64} promoText={showPromo ? promoText : ''} extraNote={extraNote} />}
