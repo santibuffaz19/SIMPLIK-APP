@@ -1,16 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, UploadCloud, Plus, Trash2, Tag, Image as ImageIcon, Link as LinkIcon, Info, ListTree, Loader2, PlusCircle } from 'lucide-react';
+import { useRouter, useParams } from 'next/navigation';
+import {
+    ArrowLeft, Save, UploadCloud, Plus, Trash2, Tag,
+    Image as ImageIcon, Link as LinkIcon, Info, ListTree, Loader2, PlusCircle
+} from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { updateProductAction, uploadImageAction } from '../../actions';
 
-import { createProductAction, uploadImageAction } from '../actions';
-
-export default function NuevoProductoUniversal() {
+export default function EditarProductoUniversal() {
     const router = useRouter();
+    const { id } = useParams();
 
-    const [loading, setLoading] = useState(false);
+    const [loadingPage, setLoadingPage] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [errorStatus, setErrorStatus] = useState<string | null>(null);
 
@@ -21,29 +26,86 @@ export default function NuevoProductoUniversal() {
     const [precioLista, setPrecioLista] = useState('');
     const [precioEfectivo, setPrecioEfectivo] = useState('');
 
-    // UN SOLO LINK PARA TODO
     const [linkExterno, setLinkExterno] = useState('');
 
-    const [atributos, setAtributos] = useState([{ id: 1, clave: 'Marca', valor: '' }]);
-    const [variantes, setVariantes] = useState([{ id: 1, nombre: 'Opción 1', valores: '' }]);
+    const [atributos, setAtributos] = useState<any[]>([]);
+    const [variantes, setVariantes] = useState<any[]>([]);
+    const [imageUrls, setImageUrls] = useState<string[]>([]);
     const [preciosExtra, setPreciosExtra] = useState<{ id: number, nombre: string, valor: string }[]>([]);
 
-    const [imageUrls, setImageUrls] = useState<string[]>([]);
-    const [imagenesSlots, setImagenesSlots] = useState<number[]>([1]);
-
-    // NUEVO ESTADO: Ocultar o mostrar logo global por defecto al crear
+    // NUEVO ESTADO: Ocultar o mostrar logo global por producto
     const [showOwnerLogo, setShowOwnerLogo] = useState(true);
 
+    useEffect(() => {
+        async function loadProduct() {
+            const { data, error } = await supabase
+                .from('products')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error || !data) {
+                setErrorStatus('No se pudo cargar el producto.');
+                setLoadingPage(false);
+                return;
+            }
+
+            setNombre(data.name);
+            setSku(data.sku || '');
+            setCategoria(data.category || '');
+            setDescripcion(data.description || '');
+            setPrecioLista(data.price_installments?.toString() || '');
+            setPrecioEfectivo(data.price_cash?.toString() || '');
+
+            setLinkExterno(data.external_link || '');
+
+            setAtributos(data.technical_specs || []);
+            setVariantes(data.variants_config || []);
+            setImageUrls(data.image_urls || []);
+
+            const extras = [];
+            if (data.custom_price_1_name) extras.push({ id: 1, nombre: data.custom_price_1_name, valor: data.custom_price_1_value?.toString() || '' });
+            if (data.custom_price_2_name) extras.push({ id: 2, nombre: data.custom_price_2_name, valor: data.custom_price_2_value?.toString() || '' });
+            setPreciosExtra(extras);
+
+            // Cargamos si el usuario lo había desactivado (default true)
+            setShowOwnerLogo(data.show_owner_logo_this_product !== false);
+
+            setLoadingPage(false);
+        }
+        loadProduct();
+    }, [id]);
+
+    const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await uploadImageAction(formData);
+
+        if (res.success && res.url) {
+            setImageUrls(prev => [...prev, res.url]);
+        } else {
+            alert("Error al subir: " + res.error);
+        }
+        setUploading(false);
+    };
+
+    const eliminarImagen = (url: string) => {
+        setImageUrls(imageUrls.filter(img => img !== url));
+    };
+
     const agregarAtributo = () => setAtributos([...atributos, { id: Date.now(), clave: '', valor: '' }]);
-    const eliminarAtributo = (id: number) => setAtributos(atributos.filter(a => a.id !== id));
-    const actualizarAtributo = (id: number, campo: 'clave' | 'valor', valor: string) => {
-        setAtributos(atributos.map(a => a.id === id ? { ...a, [campo]: valor } : a));
+    const actualizarAtributo = (idAt: number, campo: string, val: string) => {
+        setAtributos(atributos.map(a => a.id === idAt ? { ...a, [campo]: val } : a));
     };
 
     const agregarVariante = () => setVariantes([...variantes, { id: Date.now(), nombre: '', valores: '' }]);
-    const eliminarVariante = (id: number) => setVariantes(variantes.filter(v => v.id !== id));
-    const actualizarVariante = (id: number, campo: 'nombre' | 'valores', valor: string) => {
-        setVariantes(variantes.map(v => v.id === id ? { ...v, [campo]: valor } : v));
+    const actualizarVariante = (idVar: number, campo: string, val: string) => {
+        setVariantes(variantes.map(v => v.id === idVar ? { ...v, [campo]: val } : v));
     };
 
     const agregarPrecioExtra = () => {
@@ -54,42 +116,13 @@ export default function NuevoProductoUniversal() {
         setPreciosExtra(preciosExtra.map(p => p.id === id ? { ...p, [campo]: valor } : p));
     };
 
-    const agregarRanuraImagen = () => {
-        if (imagenesSlots.length < 5) setImagenesSlots([...imagenesSlots, Date.now()]);
-    };
-
-    const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        setUploading(true);
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await uploadImageAction(formData);
-        if (res.success && res.url) {
-            setImageUrls(prev => [...prev, res.url]);
-        } else {
-            alert("Error al subir la imagen: " + res.error);
-        }
-        setUploading(false);
-    };
-
-    const eliminarImagen = (url: string) => {
-        setImageUrls(imageUrls.filter(img => img !== url));
-    };
-
-    const handleGuardar = async () => {
+    const handleActualizar = async () => {
         setErrorStatus(null);
-        setLoading(true);
+        setSaving(true);
 
-        if (!nombre || !precioLista) {
-            setErrorStatus('Por favor, completá al menos el Nombre del producto y el Precio de Lista.');
-            setLoading(false);
-            return;
-        }
-
-        const productData = {
+        const updatedData = {
             name: nombre,
-            sku: sku,
+            sku,
             category: categoria,
             description: descripcion,
             price_cash: parseFloat(precioEfectivo) || 0,
@@ -102,63 +135,43 @@ export default function NuevoProductoUniversal() {
             custom_price_1_value: parseFloat(preciosExtra[0]?.valor) || null,
             custom_price_2_name: preciosExtra[1]?.nombre || null,
             custom_price_2_value: parseFloat(preciosExtra[1]?.valor) || null,
+
             // Enviamos a la DB la decisión de mostrar u ocultar el logo
             show_owner_logo_this_product: showOwnerLogo
         };
 
-        const result = await createProductAction(productData);
+        const result = await updateProductAction(id as string, updatedData);
 
         if (result.success) {
-            router.push('/dashboard/productos');
+            router.push('/dashboard/tools/tool-1-QR');
         } else {
-            setErrorStatus(result.error || 'Ocurrió un error inesperado.');
-            setLoading(false);
+            setErrorStatus(result.error || 'Error al guardar.');
+            setSaving(false);
         }
     };
 
+    if (loadingPage) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin text-indigo-600" size={40} /></div>;
+
     return (
-        <div className="max-w-6xl mx-auto text-slate-800 pb-12 font-sans">
+        <div className="max-w-6xl mx-auto pb-12 font-sans text-slate-800">
             <div className="flex items-center gap-4 mb-8">
-                <Link href="/dashboard/productos" className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-slate-500">
+                <Link href="/dashboard/tools/tool-1-QR" className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
                     <ArrowLeft size={20} />
                 </Link>
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Agregar Producto</h1>
-                    <p className="text-slate-500 mt-1">Configurá cualquier tipo de artículo o servicio.</p>
-                </div>
+                <h1 className="text-3xl font-bold text-slate-900">Editar Producto</h1>
             </div>
-
-            {errorStatus && (
-                <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl mb-6 font-medium text-sm">
-                    ⚠️ {errorStatus}
-                </div>
-            )}
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                 <div className="xl:col-span-2 space-y-6">
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                            <Tag size={20} className="text-indigo-500" /> Información Principal
-                        </h2>
+                        <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Tag size={20} className="text-indigo-500" /> Datos Generales</h2>
                         <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-1">Nombre del producto *</label>
-                                <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Taladro Percutor STANLEY 800W" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" />
-                            </div>
+                            <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre del producto" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500" />
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-1">Código / SKU</label>
-                                    <input type="text" value={sku} onChange={(e) => setSku(e.target.value)} placeholder="Opcional" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none font-mono text-sm transition-all" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-1">Categoría</label>
-                                    <input list="categorias-sugeridas" value={categoria} onChange={(e) => setCategoria(e.target.value)} placeholder="Escribí o elegí una..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all" />
-                                </div>
+                                <input type="text" value={sku} onChange={e => setSku(e.target.value)} placeholder="SKU / Código" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-mono text-sm outline-none" />
+                                <input type="text" value={categoria} onChange={e => setCategoria(e.target.value)} placeholder="Categoría" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" />
                             </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-1">Descripción Pública</label>
-                                <textarea rows={3} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Lo que leerá el cliente final al escanear el QR..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none resize-none transition-all" />
-                            </div>
+                            <textarea rows={3} value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Descripción para el cliente..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none resize-none" />
                         </div>
 
                         {/* CHECKBOX SUTIL PARA OCULTAR EL LOGO */}
@@ -178,35 +191,29 @@ export default function NuevoProductoUniversal() {
                     </div>
 
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
-                            <Info size={20} className="text-indigo-500" /> Ficha Técnica (Datos Fijos)
-                        </h2>
+                        <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Info size={20} className="text-indigo-500" /> Ficha Técnica</h2>
                         <div className="space-y-3">
-                            {atributos.map((atributo) => (
-                                <div key={atributo.id} className="flex items-center gap-3">
-                                    <input type="text" placeholder="Ej: Marca" value={atributo.clave} onChange={(e) => actualizarAtributo(atributo.id, 'clave', e.target.value)} className="w-1/3 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500 transition-all" />
-                                    <input type="text" placeholder="Ej: Stanley" value={atributo.valor} onChange={(e) => actualizarAtributo(atributo.id, 'valor', e.target.value)} className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500 transition-all" />
-                                    <button onClick={() => eliminarAtributo(atributo.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                            {atributos.map((at: any) => (
+                                <div key={at.id} className="flex gap-2">
+                                    <input placeholder="Ej: Marca" value={at.clave} onChange={e => actualizarAtributo(at.id, 'clave', e.target.value)} className="w-1/3 p-2 bg-slate-50 border rounded-lg outline-none" />
+                                    <input placeholder="Ej: Stanley" value={at.valor} onChange={e => actualizarAtributo(at.id, 'valor', e.target.value)} className="flex-1 p-2 bg-slate-50 border rounded-lg outline-none" />
+                                    <button onClick={() => setAtributos(atributos.filter(a => a.id !== at.id))} className="text-red-400 p-2"><Trash2 size={18} /></button>
                                 </div>
                             ))}
-                            <button onClick={agregarAtributo} className="text-sm font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1 mt-2">
-                                <Plus size={16} /> Sumar otro dato técnico
-                            </button>
+                            <button onClick={agregarAtributo} className="text-indigo-600 font-bold text-sm flex items-center gap-1 mt-2 hover:text-indigo-700"><Plus size={16} /> Agregar Atributo</button>
                         </div>
                     </div>
 
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
-                            <ListTree size={20} className="text-indigo-500" /> Opciones / Variantes
-                        </h2>
-                        <div className="space-y-3">
-                            {variantes.map((variante) => (
+                        <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><ListTree size={20} className="text-indigo-500" /> Opciones / Variantes</h2>
+                        <div className="space-y-3 mt-4">
+                            {variantes.map((variante: any) => (
                                 <div key={variante.id} className="flex items-start gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 relative group">
                                     <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        <input type="text" placeholder="Tipo (Ej: Sabor)" value={variante.nombre} onChange={(e) => actualizarVariante(variante.id, 'nombre', e.target.value)} className="px-3 py-2 border border-slate-200 bg-white rounded-lg text-sm outline-none focus:border-indigo-500 transition-all" />
-                                        <input type="text" placeholder="Opciones (Ej: Menta, Limón)" value={variante.valores} onChange={(e) => actualizarVariante(variante.id, 'valores', e.target.value)} className="md:col-span-2 px-3 py-2 border border-slate-200 bg-white rounded-lg text-sm outline-none focus:border-indigo-500 transition-all" />
+                                        <input type="text" placeholder="Tipo (Ej: Color)" value={variante.nombre} onChange={e => actualizarVariante(variante.id, 'nombre', e.target.value)} className="px-3 py-2 border border-slate-200 bg-white rounded-lg text-sm outline-none focus:border-indigo-500" />
+                                        <input type="text" placeholder="Valores separados por coma" value={variante.valores} onChange={e => actualizarVariante(variante.id, 'valores', e.target.value)} className="md:col-span-2 px-3 py-2 border border-slate-200 bg-white rounded-lg text-sm outline-none focus:border-indigo-500" />
                                     </div>
-                                    <button onClick={() => eliminarVariante(variante.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={18} /></button>
+                                    <button onClick={() => setVariantes(variantes.filter(v => v.id !== variante.id))} className="text-red-400 p-2 mt-0.5"><Trash2 size={18} /></button>
                                 </div>
                             ))}
                             <button onClick={agregarVariante} className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-medium hover:border-indigo-500 hover:text-indigo-600 transition-colors flex items-center justify-center gap-2 mt-2">
@@ -277,12 +284,12 @@ export default function NuevoProductoUniversal() {
                     </div>
 
                     <button
-                        onClick={handleGuardar}
-                        disabled={loading}
-                        className={`w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
+                        onClick={handleActualizar}
+                        disabled={saving}
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
                     >
-                        {loading ? <Loader2 size={22} className="animate-spin" /> : <Save size={22} />}
-                        {loading ? 'Guardando...' : 'Guardar Producto'}
+                        {saving ? <Loader2 className="animate-spin" /> : <Save size={20} />}
+                        Guardar Cambios
                     </button>
                 </div>
             </div>

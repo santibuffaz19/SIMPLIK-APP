@@ -22,7 +22,7 @@ export default function Sidebar() {
                     <p className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Herramientas</p>
 
                     {/* Herramienta 1: Catálogo QR */}
-                    <Link href="/dashboard/productos" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 transition-colors border border-indigo-600/20">
+                    <Link href="/dashboard/tools/tool-1-QR" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 transition-colors border border-indigo-600/20">
                         <QrCode size={20} />
                         <span className="font-medium">Catálogo QR</span>
                     </Link>

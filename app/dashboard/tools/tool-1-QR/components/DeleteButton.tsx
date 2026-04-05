@@ -1,7 +1,7 @@
 'use client' // Este archivo sí puede tener interactividad
 
 import { Trash2 } from 'lucide-react';
-import { deleteProductAction } from '@/app/dashboard/productos/actions';
+import { deleteProductAction } from '@/app/dashboard/tools/tool-1-QR/actions';
 
 export default function DeleteButton({ id }: { id: string }) {
     const handleDelete = async () => {

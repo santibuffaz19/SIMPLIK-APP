@@ -16,7 +16,7 @@ export async function createProductAction(data: any) {
 
     await supabase.from('products').update({ qr_code_url: qrUrl }).eq('id', productId);
 
-    revalidatePath('/dashboard/productos');
+    revalidatePath('/dashboard/tools/tool-1-QR');
     return { success: true, productId };
 }
 
@@ -29,7 +29,7 @@ export async function deleteProductAction(id: string) {
 
     if (error) return { success: false, error: error.message };
 
-    revalidatePath('/dashboard/productos');
+    revalidatePath('/dashboard/tools/tool-1-QR');
     return { success: true };
 }
 
@@ -42,7 +42,7 @@ export async function updateProductAction(id: string, data: any) {
 
     if (error) return { success: false, error: error.message };
 
-    revalidatePath('/dashboard/productos');
+    revalidatePath('/dashboard/tools/tool-1-QR');
     return { success: true };
 }
 // ACCIÓN: Importación masiva (Crear y Actualizar)
@@ -59,7 +59,7 @@ export async function bulkUpsertProductsAction(productsList: any[]) {
         return { success: false, error: error.message };
     }
 
-    revalidatePath('/dashboard/productos');
+    revalidatePath('/dashboard/tools/tool-1-QR');
     return { success: true, count: data.length };
 }
 // ACCIÓN: Subir imagen al Storage y devolver la URL pública

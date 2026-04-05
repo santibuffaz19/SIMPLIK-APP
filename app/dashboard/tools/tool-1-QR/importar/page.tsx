@@ -93,7 +93,7 @@ export default function ImportadorMasivo() {
 
                 if (res.success) {
                     setStatus({ type: 'success', msg: `¡Éxito! Se procesaron ${res.count} productos.` });
-                    setTimeout(() => router.push('/dashboard/productos'), 1500);
+                    setTimeout(() => router.push('/dashboard/tools/tool-1-QR'), 1500);
                 } else {
                     setStatus({ type: 'error', msg: 'Error al subir los datos. Revisá el formato de las columnas.' });
                 }
@@ -104,7 +104,7 @@ export default function ImportadorMasivo() {
 
     return (
         <div className="max-w-4xl mx-auto p-8 font-sans text-slate-800">
-            <Link href="/dashboard/productos" className="flex items-center gap-2 text-slate-500 hover:text-slate-800 mb-8 transition-colors font-medium">
+            <Link href="/dashboard/tools/tool-1-QR" className="flex items-center gap-2 text-slate-500 hover:text-slate-800 mb-8 transition-colors font-medium">
                 <ArrowLeft size={20} /> Volver a productos
             </Link>
 

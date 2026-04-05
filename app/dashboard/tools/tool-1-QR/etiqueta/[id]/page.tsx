@@ -83,7 +83,7 @@ export default function PaginaEtiquetaFinal() {
 
     return (
         <div className="max-w-6xl mx-auto p-8 font-sans text-slate-800 antialiased overflow-x-hidden">
-            <Link href="/dashboard/productos" className="inline-flex items-center gap-2 text-slate-400 mb-8 hover:text-indigo-600 hover:-translate-x-1 transition-all font-black uppercase text-[10px] tracking-widest">
+            <Link href="/dashboard/tools/tool-1-QR" className="inline-flex items-center gap-2 text-slate-400 mb-8 hover:text-indigo-600 hover:-translate-x-1 transition-all font-black uppercase text-[10px] tracking-widest">
                 <ArrowLeft size={14} /> Volver al catálogo
             </Link>
 

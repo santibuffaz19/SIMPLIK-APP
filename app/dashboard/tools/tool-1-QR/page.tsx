@@ -27,10 +27,10 @@ export default async function ListaProductos() {
                 </div>
 
                 <div className="flex gap-3">
-                    <Link href="/dashboard/productos/importar" className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-4 py-3 rounded-xl font-semibold shadow-sm transition-all">
+                    <Link href="/dashboard/tools/tool-1-QR/importar" className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-4 py-3 rounded-xl font-semibold shadow-sm transition-all">
                         <FileSpreadsheet size={20} /> Importar/Exportar
                     </Link>
-                    <Link href="/dashboard/productos/nuevo" className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-semibold shadow-sm transition-all hover:shadow-md">
+                    <Link href="/dashboard/tools/tool-1-QR/nuevo" className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-semibold shadow-sm transition-all hover:shadow-md">
                         <Plus size={20} /> Nuevo Producto
                     </Link>
                 </div>
@@ -70,10 +70,10 @@ export default async function ListaProductos() {
                                         </span>
                                     </td>
                                     <td className="p-4 pr-6 flex justify-end gap-1 items-center">
-                                        <Link href={`/dashboard/productos/etiqueta/${prod.id}`} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Personalizar QR">
+                                        <Link href={`/dashboard/tools/tool-1-QR/etiqueta/${prod.id}`} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Personalizar QR">
                                             <QrCode size={18} />
                                         </Link>
-                                        <Link href={`/dashboard/productos/editar/${prod.id}`} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Editar Datos">
+                                        <Link href={`/dashboard/tools/tool-1-QR/editar/${prod.id}`} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Editar Datos">
                                             <Pencil size={18} />
                                         </Link>
 
