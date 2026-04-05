@@ -6,7 +6,7 @@ import QRCode from 'qrcode';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { ArrowLeft, Loader2, Printer, Eye, CheckCircle2, Circle, Upload, X } from 'lucide-react';
 import Link from 'next/link';
-import LabelPDF from '@/components/LabelPDF';
+import LabelPDF from '../../components/LabelPDF';
 import { supabase } from '@/lib/supabase';
 
 export default function PaginaEtiquetaFinal() {
