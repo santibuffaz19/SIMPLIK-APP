@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import { PDFDownloadLink } from '@react-pdf/renderer';
-import LabelPDF from '../../components/LabelPDF'; // Importamos el diseño del PDF que creamos recién
+import LabelPDF from '../components/LabelPDF'; // Importamos el diseño del PDF que creamos recién
 
 export default function GeneradorEtiquetas() {
     // Estados para guardar lo que escribe el usuario

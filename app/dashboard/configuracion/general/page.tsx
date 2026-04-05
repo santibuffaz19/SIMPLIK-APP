@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Loader2, Save, Upload, X, Building2, Eye, ShieldCheck, MessageCircle } from 'lucide-react';
 // IMPORTANTE: Asegurate de que esta ruta apunte bien a tu archivo actions.ts
-import { uploadImageAction } from '../productos/actions';
+import { uploadImageAction } from '../../tools/tool-1-QR/actions';
 
 export default function ConfiguracionPage() {
     const [loading, setLoading] = useState(true);

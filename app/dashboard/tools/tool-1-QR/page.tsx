@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Plus, Search, QrCode, Box, Pencil, FileSpreadsheet } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import DeleteButton from '@/components/DeleteButton'; // Importamos el nuevo componente
+import DeleteButton from './components/DeleteButton';
 
 export const dynamic = 'force-dynamic';
 
