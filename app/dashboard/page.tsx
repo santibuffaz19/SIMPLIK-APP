@@ -12,9 +12,11 @@ export default function DashboardHome() {
                         <div className="bg-indigo-600 p-2.5 rounded-xl shadow-sm">
                             <LayoutGrid size={24} className="text-white" />
                         </div>
-                        <h1 className="text-4xl font-black text-white tracking-tight">Bienvenido a Simplik</h1>
+                        {/* CORREGIDO: text-slate-900 para que se vea súper nítido */}
+                        <h1 className="text-4xl font-black text-slate-900 tracking-tight">Bienvenido a Simplik</h1>
                     </div>
-                    <p className="text-slate-400 font-medium text-lg md:ml-14">Seleccioná la herramienta con la que vas a trabajar hoy.</p>
+                    {/* CORREGIDO: text-slate-500 para el subtítulo */}
+                    <p className="text-slate-500 font-medium text-lg md:ml-14">Seleccioná la herramienta con la que vas a trabajar hoy.</p>
                 </div>
 
                 {/* BOTÓN DE CONFIGURACIÓN */}
@@ -27,7 +29,7 @@ export default function DashboardHome() {
             {/* GRID DE HERRAMIENTAS - DISEÑO CLEAN Y PROFESIONAL */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
 
-                {/* TOOL 1: CATÁLOGO QR - AHORA CON "relative" PARA QUE NO SE SUPERPONGA */}
+                {/* TOOL 1: CATÁLOGO QR */}
                 <Link href="/dashboard/tools/tool-1-QR" className="relative bg-slate-900 p-8 rounded-3xl border border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group flex flex-col h-full overflow-hidden">
                     <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     <div className="bg-slate-800 border border-slate-700 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:border-indigo-700 transition-colors duration-300 relative">
@@ -42,7 +44,7 @@ export default function DashboardHome() {
                     </div>
                 </Link>
 
-                {/* TOOL 2: COMANDAS - AHORA CON "relative" */}
+                {/* TOOL 2: COMANDAS */}
                 <Link href="/dashboard/tools/tool-2-pedidos" className="relative bg-slate-900 p-8 rounded-3xl border border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group flex flex-col h-full overflow-hidden">
                     <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     <div className="bg-slate-800 border border-slate-700 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:border-emerald-700 transition-colors duration-300 relative">
@@ -57,7 +59,7 @@ export default function DashboardHome() {
                     </div>
                 </Link>
 
-                {/* PRÓXIMAMENTE - AHORA CON "relative" */}
+                {/* PRÓXIMAMENTE */}
                 <div className="relative bg-slate-900 p-8 rounded-3xl border border-slate-800 border-dashed flex flex-col h-full opacity-60">
                     <div className="bg-slate-800 border border-slate-700 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
                         <Lock size={28} className="text-slate-400" />
