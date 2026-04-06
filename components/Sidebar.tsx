@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { LayoutDashboard, QrCode, Settings, LogOut, Box } from 'lucide-react';
+import { LayoutDashboard, QrCode, Settings, LogOut, Box, Package } from 'lucide-react';
 
 export default function Sidebar() {
     return (
@@ -21,14 +21,22 @@ export default function Sidebar() {
                 <div className="pt-6 pb-2">
                     <p className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Herramientas</p>
 
-                    {/* Herramienta 1: Catálogo QR */}
-                    <Link href="/dashboard/tools/tool-1-QR" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 transition-colors border border-indigo-600/20">
-                        <QrCode size={20} />
-                        <span className="font-medium">Catálogo QR</span>
-                    </Link>
+                    <div className="space-y-3">
+                        {/* Herramienta 1: Catálogo QR */}
+                        <Link href="/dashboard/tools/tool-1-QR" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 transition-colors border border-indigo-600/20">
+                            <QrCode size={20} />
+                            <span className="font-medium">Catálogo QR</span>
+                        </Link>
+
+                        {/* Herramienta 2: Comandas Internas (NUEVA) */}
+                        <Link href="/dashboard/tools/tool-2-pedidos" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 transition-colors border border-orange-500/20">
+                            <Package size={20} />
+                            <span className="font-medium">Comandas Internas</span>
+                        </Link>
+                    </div>
 
                     {/* Espacio para futuras herramientas */}
-                    <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 cursor-not-allowed mt-2">
+                    <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 cursor-not-allowed mt-3">
                         <Box size={20} />
                         <span className="font-medium">Próximamente...</span>
                     </button>
