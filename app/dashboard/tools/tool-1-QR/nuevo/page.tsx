@@ -151,12 +151,12 @@ export default function NuevoProductoUniversal() {
                         <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2"><Info size={20} className="text-indigo-500" /> Ficha Técnica (Datos Fijos)</h2>
                         <div className="space-y-3">
                             {atributos.map((atributo) => (
-                                /* CORRECCIÓN: flex-col en celular */
-                                <div key={atributo.id} className="flex flex-col sm:flex-row items-end sm:items-center gap-2 sm:gap-3 bg-slate-50 p-2 rounded-xl sm:bg-transparent sm:p-0">
+                                /* CORRECCIÓN: items-center en celular para el tacho de basura */
+                                <div key={atributo.id} className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 bg-slate-50 p-2 rounded-xl sm:bg-transparent sm:p-0">
                                     <input type="text" placeholder="Ej: Marca" value={atributo.clave} onChange={(e) => actualizarAtributo(atributo.id, 'clave', e.target.value)} className="w-full sm:w-1/3 px-3 py-2 bg-white sm:bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500" />
-                                    <div className="flex w-full sm:flex-1 gap-2">
+                                    <div className="flex w-full sm:flex-1 gap-2 items-center">
                                         <input type="text" placeholder="Valor..." value={atributo.valor} onChange={(e) => actualizarAtributo(atributo.id, 'valor', e.target.value)} className="flex-1 px-3 py-2 bg-white sm:bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500" />
-                                        <button onClick={() => eliminarAtributo(atributo.id)} className="p-2 bg-white sm:bg-transparent border border-slate-200 sm:border-none rounded-lg text-slate-400 hover:text-red-500 shrink-0"><Trash2 size={18} /></button>
+                                        <button onClick={() => eliminarAtributo(atributo.id)} className="p-2 bg-white sm:bg-transparent border border-slate-200 sm:border-none rounded-lg text-slate-400 hover:text-red-500 shrink-0 h-[38px] flex items-center justify-center"><Trash2 size={18} /></button>
                                     </div>
                                 </div>
                             ))}
@@ -168,7 +168,6 @@ export default function NuevoProductoUniversal() {
                         <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2"><ListTree size={20} className="text-indigo-500" /> Opciones / Variantes</h2>
                         <div className="space-y-3">
                             {variantes.map((variante) => (
-                                /* CORRECCIÓN: Apilamiento en celular */
                                 <div key={variante.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 relative group">
                                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full">
                                         <input type="text" placeholder="Tipo (Ej: Sabor)" value={variante.nombre} onChange={(e) => actualizarVariante(variante.id, 'nombre', e.target.value)} className="w-full px-3 py-2 border border-slate-200 bg-white rounded-lg text-sm outline-none focus:border-indigo-500" />
@@ -189,7 +188,6 @@ export default function NuevoProductoUniversal() {
                         <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><ImageIcon size={20} className="text-indigo-500" /> Multimedia y Links</h2>
                         <div className="mb-4">
                             <label className="block text-sm font-semibold text-slate-700 mb-2">Fotos Locales (Hasta 5)</label>
-                            {/* CORRECCIÓN: grid-cols-2 en celu, grid-cols-3 en PC */}
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                 {imageUrls.map((url, i) => (
                                     <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200">
@@ -230,7 +228,6 @@ export default function NuevoProductoUniversal() {
                             <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">Precios Especiales</h3>
                             <div className="space-y-3">
                                 {preciosExtra.map((precio) => (
-                                    /* CORRECCIÓN: flex-col en celular */
                                     <div key={precio.id} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-slate-50 p-2 sm:bg-transparent sm:p-0 rounded-xl border sm:border-none border-slate-200">
                                         <div className="flex flex-1 gap-2 w-full">
                                             <input type="text" placeholder="Ej: Cuenta DNI" value={precio.nombre} onChange={(e) => actualizarPrecioExtra(precio.id, 'nombre', e.target.value)} className="w-1/2 px-3 py-2 bg-white sm:bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500" />

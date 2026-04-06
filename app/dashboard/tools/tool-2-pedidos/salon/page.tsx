@@ -48,7 +48,7 @@ export default function SalonVentas() {
         return () => clearInterval(radar);
     }, []);
 
-    // MOTOR DEL ESCÁNER QR - CORRECCIÓN: Usa Html5Qrcode directo para auto-pedir permisos
+    // MOTOR DEL ESCÁNER QR - INTERCEPTOR DE ENLACES
     useEffect(() => {
         let html5QrCode: any;
         if (showScanner) {
@@ -57,10 +57,27 @@ export default function SalonVentas() {
                 html5QrCode.start(
                     { facingMode: "environment" },
                     { fps: 10, qrbox: { width: 250, height: 250 } },
-                    (decodedText: string) => {
-                        setProductoPedido(decodedText);
-                        setShowScanner(false);
+                    async (decodedText: string) => {
+                        // DETENEMOS EL ESCÁNER
                         html5QrCode.stop().catch(console.error);
+                        setShowScanner(false);
+
+                        // ¿ES UN LINK DE TU APP? (Ej: https://simplik.../p/12345)
+                        if (decodedText.includes('/p/')) {
+                            const partes = decodedText.split('/p/');
+                            const idProducto = partes[1]; // Sacamos el ID
+
+                            // BUSCAMOS EL NOMBRE REAL EN SUPABASE
+                            const { data } = await supabase.from('products').select('name').eq('id', idProducto).single();
+                            if (data && data.name) {
+                                setProductoPedido(data.name);
+                            } else {
+                                setProductoPedido(decodedText); // Por las dudas si falla, dejamos el link
+                            }
+                        } else {
+                            // SI NO ES UN LINK (Ej: es un código de barras común)
+                            setProductoPedido(decodedText);
+                        }
                     },
                     (errorMessage: string) => { /* ignora frames vacíos */ }
                 ).catch((err: any) => {
@@ -88,6 +105,7 @@ export default function SalonVentas() {
         if (!productoPedido.trim()) return alert('Escribí un producto antes de agregarlo.');
         let unitToSave = unidad === 'otro' ? unidadCustom.trim() : unidad;
         if (unidad === 'otro' && !unitToSave) return alert('Especificá la unidad de medida.');
+
         setCarrito([...carrito, { id: Date.now(), producto: productoPedido, cantidad, unidad: unitToSave, notaItem: notaItem.trim() }]);
         setProductoPedido(''); setCantidad(1); setUnidadCustom(''); setNotaItem('');
     };
@@ -113,6 +131,7 @@ export default function SalonVentas() {
         }
 
         const res = await crearPedidoAction({ producto_pedido: productoFinal, cantidad: cantidadFinal, urgencia, notas });
+
         if (res.success) {
             setCarrito([]); setProductoPedido(''); setCantidad(1); setUnidadCustom(''); setNotaItem(''); setUrgencia('normal'); setNotas('');
             cargarPedidos();
@@ -262,14 +281,15 @@ export default function SalonVentas() {
                                     </h3>
                                     <ul className="space-y-2">
                                         {carrito.map(item => (
-                                            <li key={item.id} className="flex justify-between items-start bg-white p-3 rounded-xl border border-indigo-50 shadow-sm text-sm">
+                                            <li key={item.id} className="flex justify-between items-start bg-white p-3 rounded-xl border border-indigo-50 shadow-sm text-sm break-all">
                                                 <div className="flex flex-col">
                                                     <span className="font-bold text-slate-700">
-                                                        <span className="text-indigo-600 mr-2 bg-indigo-50 px-1.5 py-0.5 rounded">{item.cantidad} {item.unidad}</span>{item.producto}
+                                                        <span className="text-indigo-600 mr-2 bg-indigo-50 px-1.5 py-0.5 rounded whitespace-nowrap">{item.cantidad} {item.unidad}</span>
+                                                        {item.producto}
                                                     </span>
-                                                    {item.notaItem && <span className="text-[11px] text-slate-500 italic mt-1 bg-slate-50 p-1 rounded">👉 {item.notaItem}</span>}
+                                                    {item.notaItem && <span className="text-[11px] text-slate-500 italic mt-1 bg-slate-50 p-1 rounded w-fit">👉 {item.notaItem}</span>}
                                                 </div>
-                                                <button onClick={() => eliminarDelCarrito(item.id)} className="text-slate-400 hover:text-red-500 p-1.5 bg-slate-50 rounded-lg hover:bg-red-50 transition-colors shrink-0"><Trash2 size={16} /></button>
+                                                <button onClick={() => eliminarDelCarrito(item.id)} className="text-slate-400 hover:text-red-500 p-1.5 bg-slate-50 rounded-lg hover:bg-red-50 transition-colors shrink-0 ml-2"><Trash2 size={16} /></button>
                                             </li>
                                         ))}
                                     </ul>
@@ -360,18 +380,17 @@ export default function SalonVentas() {
                                                         </div>
                                                     )}
                                                     {isPausado && (
-                                                        /* CORRECCIÓN: Botones no aplastados */
                                                         <div className="flex flex-col sm:flex-row gap-2 mt-2 pt-2 border-t border-amber-100">
                                                             <input
                                                                 type="text"
                                                                 value={respuestas[ped.id] || ''}
                                                                 onChange={e => setRespuestas({ ...respuestas, [ped.id]: e.target.value })}
                                                                 placeholder="Escribí tu respuesta..."
-                                                                className="flex-1 p-2.5 text-xs bg-amber-50 border border-amber-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500/20 w-full"
+                                                                className="flex-1 p-2.5 text-xs bg-amber-50 border border-amber-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500/20"
                                                             />
                                                             <button
                                                                 onClick={() => enviarRespuesta(ped.id)}
-                                                                className="bg-amber-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-600 flex items-center justify-center gap-1.5 transition-colors shadow-sm shrink-0"
+                                                                className="bg-amber-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-600 flex items-center justify-center gap-1.5 transition-colors shadow-sm"
                                                             >
                                                                 Responder <Send size={14} />
                                                             </button>

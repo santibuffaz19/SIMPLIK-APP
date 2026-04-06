@@ -34,7 +34,6 @@ export default function PaginaEtiquetaFinal() {
 
     useEffect(() => {
         async function fetchData() {
-            // 1. Buscamos el producto y generamos su QR
             const { data: prodData } = await supabase.from('products').select('*').eq('id', id).single();
             if (prodData) {
                 setProduct(prodData);
@@ -42,17 +41,14 @@ export default function PaginaEtiquetaFinal() {
                 setQrBase64(b64);
             }
 
-            // 2. Buscamos tus ajustes predeterminados de la Tool 1
             const { data: settingsData } = await supabase.from('tool_qr_settings').select('*').eq('id', 1).single();
             if (settingsData) {
-                // Aplicamos las medidas y el layout que configuraste en tu panel
                 setWidth(settingsData.default_width_mm || 50);
                 setHeight(settingsData.default_height_mm || 25);
                 setDebouncedWidth(settingsData.default_width_mm || 50);
                 setDebouncedHeight(settingsData.default_height_mm || 25);
                 setLayout(settingsData.default_layout || 'qr-right');
             }
-
             setLoading(false);
         }
         fetchData();
@@ -62,7 +58,6 @@ export default function PaginaEtiquetaFinal() {
         const timer = setTimeout(() => {
             const w = Number(width);
             const h = Number(height);
-            // Calculamos seguro por detrás sin molestar al usuario con puntos rojos
             setDebouncedWidth(w > 10 ? w : 50);
             setDebouncedHeight(h > 10 ? h : 25);
         }, 800);
@@ -89,87 +84,72 @@ export default function PaginaEtiquetaFinal() {
 
     if (loading) return <div className="flex h-screen items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-indigo-600" size={40} /></div>;
 
-    // LÓGICA DE ESCALADO SIMPLE Y SEGURA PARA LA PREVISUALIZACIÓN
     const w = Number(width) || 50;
     const h = Number(height) || 25;
-    const scale = Math.min(w / 50, h / 25); // Achica el diseño si cambias la proporción
+    const scale = Math.min(w / 50, h / 25);
 
     return (
-        <div className="max-w-6xl mx-auto p-8 font-sans text-slate-800 antialiased overflow-x-hidden">
-            <Link href="/dashboard/tools/tool-1-QR" className="inline-flex items-center gap-2 text-slate-400 mb-8 hover:text-indigo-600 hover:-translate-x-1 transition-all font-black uppercase text-[10px] tracking-widest">
+        <div className="max-w-6xl mx-auto p-4 md:p-8 font-sans text-slate-800 antialiased overflow-x-hidden">
+            <Link href="/dashboard/tools/tool-1-QR" className="inline-flex items-center gap-2 text-slate-400 mb-8 mt-12 md:mt-0 ml-4 md:ml-0 hover:text-indigo-600 hover:-translate-x-1 transition-all font-black uppercase text-[10px] tracking-widest">
                 <ArrowLeft size={14} /> Volver al catálogo
             </Link>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                <div className="lg:col-span-7 space-y-10">
-                    <header>
-                        <h1 className="text-5xl font-black text-slate-900 tracking-tighter mb-2">Motor de Etiquetas</h1>
-                        <p className="text-slate-400 font-medium text-lg italic">Personalizá la impresión para {product.name}.</p>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
+                <div className="lg:col-span-7 space-y-8 md:space-y-10">
+                    <header className="px-2 md:px-0">
+                        <h1 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter mb-2">Motor de Etiquetas</h1>
+                        <p className="text-slate-400 font-medium text-base md:text-lg italic">Personalizá la impresión para {product.name}.</p>
                     </header>
 
-                    <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-xl space-y-10">
-                        <div className="grid grid-cols-2 gap-10">
+                    <div className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-slate-200 shadow-xl space-y-8 md:space-y-10">
+                        <div className="grid grid-cols-2 gap-4 md:gap-10">
                             <div>
-                                <h2 className="text-[11px] font-black text-slate-400 uppercase mb-4">ANCHO (mm)</h2>
-                                <input
-                                    type="number"
-                                    value={width}
-                                    onChange={e => setWidth(e.target.value === '' ? '' : Number(e.target.value))}
-                                    className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-bold text-xl focus:ring-2 focus:ring-indigo-500/20"
-                                />
+                                <h2 className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase mb-3 md:mb-4">ANCHO (mm)</h2>
+                                <input type="number" value={width} onChange={e => setWidth(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-4 md:p-5 bg-slate-50 rounded-2xl border-none outline-none font-bold text-lg md:text-xl focus:ring-2 focus:ring-indigo-500/20 text-center md:text-left" />
                             </div>
                             <div>
-                                <h2 className="text-[11px] font-black text-slate-400 uppercase mb-4">ALTO (mm)</h2>
-                                <input
-                                    type="number"
-                                    value={height}
-                                    onChange={e => setHeight(e.target.value === '' ? '' : Number(e.target.value))}
-                                    className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-bold text-xl focus:ring-2 focus:ring-indigo-500/20"
-                                />
+                                <h2 className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase mb-3 md:mb-4">ALTO (mm)</h2>
+                                <input type="number" value={height} onChange={e => setHeight(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-4 md:p-5 bg-slate-50 rounded-2xl border-none outline-none font-bold text-lg md:text-xl focus:ring-2 focus:ring-indigo-500/20 text-center md:text-left" />
                             </div>
                         </div>
 
                         <div>
-                            <h2 className="text-[11px] font-black text-slate-400 uppercase mb-5">UBICACIÓN DEL QR</h2>
-                            <div className="grid grid-cols-3 gap-4">
+                            <h2 className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase mb-4">UBICACIÓN DEL QR</h2>
+                            {/* CORRECCIÓN: flex-col en celular, grid en pc */}
+                            <div className="flex flex-col md:grid md:grid-cols-3 gap-3 md:gap-4">
                                 {[{ id: 'qr-left', l: 'IZQUIERDA' }, { id: 'qr-center', l: 'CENTRO' }, { id: 'qr-right', l: 'DERECHA' }].map(pos => (
-                                    <button key={pos.id} onClick={() => setLayout(pos.id)} className={`p-4 rounded-2xl border-2 font-black text-[10px] transition-all hover:shadow-md ${layout === pos.id ? 'border-indigo-600 bg-indigo-600 text-white translate-y-[-2px]' : 'border-slate-100 text-slate-400 bg-slate-50 hover:border-slate-200 hover:text-slate-600'}`}>{pos.l}</button>
+                                    <button key={pos.id} onClick={() => setLayout(pos.id)} className={`p-4 rounded-2xl border-2 font-black text-[10px] transition-all w-full ${layout === pos.id ? 'border-indigo-600 bg-indigo-600 text-white md:-translate-y-1 shadow-md' : 'border-slate-100 text-slate-400 bg-slate-50 hover:border-slate-200'}`}>{pos.l}</button>
                                 ))}
                             </div>
                         </div>
 
-                        <div className="pt-10 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-10">
+                        <div className="pt-8 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-4">
-                                <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Visibilidad</h2>
+                                <h2 className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Visibilidad</h2>
                                 <Toggle active={showName} label="Nombre" onClick={() => setShowName(!showName)} />
                                 <Toggle active={showPrice} label="Precio" onClick={() => setShowPrice(!showPrice)} />
                                 <Toggle active={showSku} label="Código" onClick={() => setShowSku(!showSku)} />
                                 <Toggle active={showPromo} label="Promo" onClick={() => setShowPromo(!showPromo)} />
                             </div>
                             <div className="space-y-4">
-                                <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Textos Adicionales</h2>
+                                <h2 className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Textos Adicionales</h2>
                                 <input type="text" value={extraNote} onChange={e => setExtraNote(e.target.value)} placeholder="Nota al pie..." className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl text-sm focus:bg-white transition-all outline-none" />
-                                {showPromo && <input type="text" value={promoText} onChange={e => setPromoText(e.target.value)} className="w-full p-4 bg-indigo-50 border-2 border-indigo-100 rounded-2xl text-sm font-bold text-indigo-700 outline-none animate-in fade-in zoom-in" />}
+                                {showPromo && <input type="text" value={promoText} onChange={e => setPromoText(e.target.value)} className="w-full p-4 bg-indigo-50 border-2 border-indigo-100 rounded-2xl text-sm font-bold text-indigo-700 outline-none animate-in fade-in" />}
                             </div>
                         </div>
 
-                        <div className="pt-10 border-t border-slate-100">
-                            <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-5">Logo de Empresa</h2>
+                        <div className="pt-8 border-t border-slate-100">
+                            <h2 className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest mb-5">Logo de Empresa</h2>
                             {!logoBase64 ? (
-                                <label className="flex items-center justify-center gap-3 w-full p-6 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl cursor-pointer hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all group">
-                                    <Upload size={20} className="group-hover:bounce" />
+                                <label className="flex items-center justify-center gap-3 w-full p-6 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 transition-all">
+                                    <Upload size={20} />
                                     <span className="font-bold text-sm">Seleccionar Imagen</span>
                                     <input type="file" onChange={handleLogoUpload} className="hidden" />
                                 </label>
                             ) : (
                                 <div className="relative inline-block group">
                                     <img src={logoBase64} className="h-16 w-auto rounded-xl border p-2 bg-slate-50" />
-                                    <button
-                                        onClick={() => setLogoBase64(null)}
-                                        className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg hover:bg-red-600 transition-colors"
-                                    >
-                                        <X size={14} />
-                                    </button>
+                                    <button onClick={() => setLogoBase64(null)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg hover:bg-red-600 transition-colors"><X size={14} /></button>
                                 </div>
                             )}
                         </div>
@@ -177,15 +157,14 @@ export default function PaginaEtiquetaFinal() {
                 </div>
 
                 <div className="lg:col-span-5">
-                    <div className="sticky top-8 space-y-8">
-                        <div className="bg-slate-900 rounded-[3.5rem] p-12 text-white shadow-2xl relative group overflow-hidden">
-                            <div className="flex items-center justify-center gap-3 mb-10 text-indigo-400 font-black uppercase text-[10px] tracking-[0.3em]"><Eye size={12} /> Previsualización</div>
+                    <div className="sticky top-8 space-y-6 md:space-y-8">
+                        <div className="bg-slate-900 rounded-[2.5rem] md:rounded-[3.5rem] p-6 md:p-12 text-white shadow-2xl relative group overflow-hidden">
+                            <div className="flex items-center justify-center gap-3 mb-6 md:mb-10 text-indigo-400 font-black uppercase text-[10px] tracking-[0.3em]"><Eye size={12} /> Previsualización</div>
 
-                            <div className="flex justify-center mb-12 relative overflow-hidden">
-                                {/* CAJA EXTERNA: Respeta la medida física que escribe el cliente */}
-                                <div style={{ width: w * 3.8, height: h * 3.8 }} className="bg-white flex items-center justify-center border-4 border-white/5 transition-all duration-300 shadow-2xl overflow-hidden">
-
-                                    {/* CAJA INTERNA: Tiene tu diseño original y se hace un "Zoom" para encajar perfecto */}
+                            <div className="flex justify-center mb-8 md:mb-12 relative overflow-hidden w-full">
+                                {/* CAJA EXTERNA */}
+                                <div style={{ width: w * 3.8, height: h * 3.8 }} className="bg-white flex items-center justify-center border-4 border-white/5 transition-all duration-300 shadow-2xl overflow-hidden max-w-full">
+                                    {/* CAJA INTERNA */}
                                     <div style={{ width: 190, height: 95, transform: `scale(${scale})`, transformOrigin: 'center' }} className={`text-black flex items-center p-3 w-full h-full ${!hasContent ? (layout === 'qr-left' ? 'justify-start' : (layout === 'qr-right' ? 'justify-end' : 'justify-center')) : 'justify-center'}`}>
                                         {layout === 'qr-center' && hasContent ? (
                                             <div className="flex w-full h-full items-center">
@@ -223,12 +202,12 @@ export default function PaginaEtiquetaFinal() {
                                 <PDFDownloadLink
                                     document={<LabelPDF productName={product.name} price={product.price_installments} sku={product.sku} qrCodeData={qrBase64} widthMm={debouncedWidth} heightMm={debouncedHeight} layout={layout} showPrice={showPrice} showSku={showSku} showName={showName} logoBase64={logoBase64} promoText={showPromo ? promoText : ''} extraNote={extraNote} />}
                                     fileName={`simplik-${product.name}.pdf`}
-                                    className="flex items-center justify-center gap-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-6 rounded-3xl transition-all shadow-xl uppercase text-xs tracking-widest active:scale-95"
+                                    className="flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 md:py-6 rounded-2xl md:rounded-3xl transition-all shadow-xl uppercase text-xs tracking-widest active:scale-95"
                                 >
                                     {({ loading }) => (
                                         <>
-                                            {loading ? <Loader2 size={20} className="animate-spin" /> : <Printer size={20} />}
-                                            {loading ? 'Generando PDF...' : 'Descargar PDF'}
+                                            {loading ? <Loader2 size={18} className="animate-spin" /> : <Printer size={18} />}
+                                            {loading ? 'Generando...' : 'Descargar PDF'}
                                         </>
                                     )}
                                 </PDFDownloadLink>
