@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Save, Upload, X, Building2, Eye, ShieldCheck, MessageCircle } from 'lucide-react';
+import Link from 'next/link';
+import { Loader2, Save, Upload, X, Building2, Eye, ShieldCheck, MessageCircle, ArrowLeft } from 'lucide-react';
 // IMPORTANTE: Asegurate de que esta ruta apunte bien a tu archivo actions.ts
 import { uploadImageAction } from '../../tools/tool-1-QR/actions';
 
@@ -103,6 +104,14 @@ export default function ConfiguracionPage() {
 
     return (
         <div className="max-w-4xl mx-auto p-8 font-sans text-slate-800 pb-20">
+
+            {/* BOTÓN DE VOLVER */}
+            <div className="mb-6">
+                <Link href="/dashboard/configuracion" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm hover:shadow">
+                    <ArrowLeft size={16} /> Volver a Ajustes
+                </Link>
+            </div>
+
             <header className="mb-10">
                 <h1 className="text-4xl font-black text-slate-900 tracking-tighter mb-2">Configuración</h1>
                 <p className="text-slate-500 font-medium text-lg">Personalizá tu cuenta y la presencia de tu marca.</p>
