@@ -8,12 +8,22 @@ import { Suspense } from 'react';
 function ConfiguracionContent() {
     const searchParams = useSearchParams();
 
-    // Leemos de dónde viene. Si no dice nada, asumimos que viene del dashboard.
-    let fromPage = searchParams.get('from') || '/dashboard';
+    // Leemos de dónde viene.
+    let fromParam = searchParams.get('from');
 
-    // ESCUDO ANTI-BUCLES: Si por algún motivo "from" es otra página de configuración, forzamos la salida al dashboard
-    if (fromPage.includes('/configuracion')) {
-        fromPage = '/dashboard';
+    // Armamos una URL de regreso blindada
+    let backUrl = '/dashboard';
+    if (fromParam) {
+        if (fromParam.startsWith('/')) {
+            backUrl = fromParam;
+        } else {
+            backUrl = `/${fromParam}`;
+        }
+    }
+
+    // ESCUDO ANTI-BUCLES
+    if (backUrl.includes('/configuracion')) {
+        backUrl = '/dashboard';
     }
 
     return (
@@ -21,7 +31,7 @@ function ConfiguracionContent() {
 
             <div className="mb-6">
                 <Link
-                    href={fromPage}
+                    href={backUrl}
                     className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm hover:shadow"
                 >
                     <ArrowLeft size={16} /> Volver atrás

@@ -1,14 +1,19 @@
-'use client'; // Agregamos esto para poder leer la ruta
+'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation'; // Nueva herramienta para saber dónde estamos
+import { usePathname } from 'next/navigation';
 import { LayoutDashboard, QrCode, Settings, LogOut, Box, Package } from 'lucide-react';
 
 export default function Sidebar() {
-    const pathname = usePathname(); // Acá leemos en qué pantalla está parado el usuario
+    const pathname = usePathname();
+
+    // MAGIA: Si estamos en el Hub principal, no mostramos el sidebar lateral
+    if (pathname === '/dashboard') {
+        return null;
+    }
 
     return (
-        <div className="w-64 h-screen bg-slate-900 text-slate-300 flex flex-col font-sans">
+        <div className="w-64 min-h-screen bg-slate-900 text-slate-300 flex flex-col font-sans shrink-0">
             <div className="h-20 flex items-center px-8 border-b border-slate-800">
                 <h1 className="text-2xl font-bold text-white tracking-tight">Simplik<span className="text-indigo-500">.</span></h1>
             </div>
@@ -44,7 +49,6 @@ export default function Sidebar() {
             </nav>
 
             <div className="p-4 border-t border-slate-800 space-y-2">
-                {/* ACÁ ESTÁ LA MAGIA: Le pasamos a configuraciones la ruta de donde venimos */}
                 <Link href={`/dashboard/configuracion?from=${pathname}`} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
                     <Settings size={20} />
                     <span className="font-medium">Configuración</span>
