@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
-    Loader2, Tag, PlayCircle, ShieldCheck, Banknote, CreditCard, ListTree, Info, PlusCircle, ExternalLink, X, MessageCircle, Instagram
+    Loader2, Tag, PlayCircle, ShieldCheck, Banknote, CreditCard, ListTree, Info, PlusCircle, ExternalLink, X, MessageCircle
 } from 'lucide-react';
 
 export default function PaginaProductoPublico() {
