@@ -15,11 +15,15 @@ export default function SalonVentas() {
     // Formulario
     const [productoPedido, setProductoPedido] = useState('');
     const [cantidad, setCantidad] = useState(1);
+
+    // NUEVOS ESTADOS PARA UNIDADES
+    const [unidad, setUnidad] = useState('unidades');
+    const [unidadCustom, setUnidadCustom] = useState('');
+
     const [urgencia, setUrgencia] = useState('normal');
     const [notas, setNotas] = useState('');
 
     useEffect(() => {
-        // Traemos los nombres de los productos para autocompletar
         async function fetchCatalogo() {
             const { data } = await supabase.from('products').select('name, sku').limit(200);
             if (data) setProductosCatalogo(data);
@@ -27,7 +31,6 @@ export default function SalonVentas() {
         fetchCatalogo();
         cargarPedidos();
 
-        // MAGIA: El radar busca actualizaciones cada 5 segundos
         const radar = setInterval(cargarPedidos, 5000);
         return () => clearInterval(radar);
     }, []);
@@ -41,11 +44,19 @@ export default function SalonVentas() {
 
     const handleEnviarPedido = async () => {
         if (!productoPedido || cantidad < 1) return alert('Completá qué producto necesitás.');
+
+        // LÓGICA PARA UNIR NÚMERO Y TIPO DE MEDIDA
+        let cantidadFinal = `${cantidad} ${unidad}`;
+        if (unidad === 'otro') {
+            if (!unidadCustom.trim()) return alert('Por favor, especificá la unidad de medida (Ej: Paquetes, Pallets...).');
+            cantidadFinal = `${cantidad} ${unidadCustom.trim()}`;
+        }
+
         setLoading(true);
 
         const res = await crearPedidoAction({
             producto_pedido: productoPedido,
-            cantidad: cantidad.toString(),
+            cantidad: cantidadFinal,
             urgencia,
             notas
         });
@@ -53,6 +64,8 @@ export default function SalonVentas() {
         if (res.success) {
             setProductoPedido('');
             setCantidad(1);
+            setUnidad('unidades');
+            setUnidadCustom('');
             setUrgencia('normal');
             setNotas('');
             cargarPedidos();
@@ -67,7 +80,7 @@ export default function SalonVentas() {
             case 'pendiente': return { color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', icon: <Clock size={16} />, texto: 'Enviado' };
             case 'preparando': return { color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', icon: <RefreshCw size={16} className="animate-spin" />, texto: 'Preparando' };
             case 'listo': return { color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', icon: <CheckCircle2 size={16} />, texto: 'Listo / En camino' };
-            case 'rechazado': return { color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', icon: <XCircle size={16} />, texto: 'Sin Stock' };
+            case 'rechazado': return { color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', icon: <XCircle size={16} />, texto: 'Cancelado / Sin Stock' };
             default: return { color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-200', icon: <Clock size={16} />, texto: estado };
         }
     };
@@ -76,7 +89,7 @@ export default function SalonVentas() {
         <div className="max-w-6xl mx-auto p-8 font-sans text-slate-800">
             <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-4">
-                    <Link href="/dashboard/tools/tool-2-pedidos" className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-500 transition-all">
+                    <Link href="/dashboard/tools/tool-2-pedidos" className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-500 transition-all shadow-sm">
                         <ArrowLeft size={20} />
                     </Link>
                     <div>
@@ -85,14 +98,14 @@ export default function SalonVentas() {
                         </h1>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm font-bold text-slate-400">
+                <div className="flex items-center gap-2 text-sm font-bold text-slate-400 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100">
                     {refreshing ? <RefreshCw size={16} className="animate-spin" /> : <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>}
                     Conexión en vivo
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* PANEL DE PEDIDO NUEVO (IZQUIERDA) */}
+                {/* PANEL DE PEDIDO NUEVO */}
                 <div className="lg:col-span-5 space-y-6">
                     <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl shadow-indigo-900/5">
                         <h2 className="text-xl font-bold text-slate-900 mb-6 border-b border-slate-100 pb-4">Nueva Solicitud</h2>
@@ -113,13 +126,40 @@ export default function SalonVentas() {
                                 </datalist>
                             </div>
 
+                            {/* NUEVO: SELECTOR DE UNIDADES INTEGRADO */}
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Cantidad</label>
-                                <div className="flex items-center gap-4">
-                                    <button onClick={() => setCantidad(c => Math.max(1, c - 1))} className="p-3 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"><Minus size={20} /></button>
-                                    <div className="flex-1 text-center font-black text-3xl">{cantidad}</div>
-                                    <button onClick={() => setCantidad(c => c + 1)} className="p-3 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"><Plus size={20} /></button>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Cantidad y Tipo</label>
+                                <div className="flex flex-col sm:flex-row items-center gap-4">
+                                    <div className="flex items-center gap-4 bg-slate-50 border border-slate-200 rounded-xl p-1.5 w-full sm:w-auto">
+                                        <button onClick={() => setCantidad(c => Math.max(1, c - 1))} className="p-3 bg-white shadow-sm hover:bg-slate-100 rounded-lg transition-colors"><Minus size={18} /></button>
+                                        <div className="w-12 text-center font-black text-2xl">{cantidad}</div>
+                                        <button onClick={() => setCantidad(c => c + 1)} className="p-3 bg-white shadow-sm hover:bg-slate-100 rounded-lg transition-colors"><Plus size={18} /></button>
+                                    </div>
+
+                                    <select value={unidad} onChange={(e) => setUnidad(e.target.value)} className="w-full sm:flex-1 p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-600">
+                                        <option value="unidades">Unidades</option>
+                                        <option value="metros">Metros</option>
+                                        <option value="kilos">Kilos</option>
+                                        <option value="litros">Litros</option>
+                                        <option value="cajas">Cajas</option>
+                                        <option value="rollos">Rollos</option>
+                                        <option value="pares">Pares</option>
+                                        <option value="otro">Agregar otra...</option>
+                                    </select>
                                 </div>
+
+                                {/* INPUT MÁGICO SI ELIGEN "OTRO" */}
+                                {unidad === 'otro' && (
+                                    <div className="mt-3 animate-in fade-in slide-in-from-top-2">
+                                        <input
+                                            type="text"
+                                            value={unidadCustom}
+                                            onChange={e => setUnidadCustom(e.target.value)}
+                                            placeholder="Ej: Gramos, Paquetes, Pallets..."
+                                            className="w-full p-4 bg-indigo-50 border border-indigo-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm font-bold text-indigo-800 placeholder:text-indigo-400"
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             <div>
@@ -147,7 +187,7 @@ export default function SalonVentas() {
                     </div>
                 </div>
 
-                {/* PANEL DE HISTORIAL EN VIVO (DERECHA) */}
+                {/* PANEL DE HISTORIAL */}
                 <div className="lg:col-span-7">
                     <div className="bg-slate-50 p-8 rounded-3xl border border-slate-200 h-full flex flex-col">
                         <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
@@ -162,7 +202,7 @@ export default function SalonVentas() {
                                     const ui = getEstadoUI(ped.estado);
                                     return (
                                         <div key={ped.id} className={`bg-white p-5 rounded-2xl border-2 transition-all ${ui.border} ${ped.urgencia === 'urgente' && ped.estado === 'pendiente' ? 'shadow-md shadow-red-500/10' : 'shadow-sm'}`}>
-                                            <div className="flex justify-between items-start mb-2">
+                                            <div className="flex justify-between items-start mb-3">
                                                 <div className="flex items-center gap-2">
                                                     <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase flex items-center gap-1.5 ${ui.bg} ${ui.color}`}>
                                                         {ui.icon} {ui.texto}
@@ -173,10 +213,12 @@ export default function SalonVentas() {
                                                     {new Date(ped.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
-                                            <h3 className="text-lg font-black text-slate-800 leading-tight">
-                                                <span className="text-slate-400 mr-2">{ped.cantidad}x</span> {ped.producto_pedido}
+                                            <h3 className="text-lg font-black text-slate-800 leading-tight flex items-center gap-2">
+                                                {/* MODIFICADO PARA MOSTRAR TEXTO "10 Cajas" COMO BADGE */}
+                                                <span className="bg-slate-800 text-white px-2 py-1 rounded-md text-sm whitespace-nowrap">{ped.cantidad}</span>
+                                                {ped.producto_pedido}
                                             </h3>
-                                            {ped.notas && <p className="text-sm font-medium text-slate-500 mt-2 bg-slate-50 p-2 rounded-lg italic">"{ped.notas}"</p>}
+                                            {ped.notas && <p className="text-sm font-medium text-slate-500 mt-3 bg-slate-50 p-2.5 rounded-xl border border-slate-100 italic">"{ped.notas}"</p>}
                                         </div>
                                     )
                                 })

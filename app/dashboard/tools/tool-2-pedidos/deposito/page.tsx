@@ -11,7 +11,6 @@ export default function DepositoVentas() {
 
     useEffect(() => {
         cargarPedidos();
-        // MAGIA: El radar busca pedidos nuevos cada 5 segundos
         const radar = setInterval(cargarPedidos, 5000);
         return () => clearInterval(radar);
     }, []);
@@ -28,10 +27,8 @@ export default function DepositoVentas() {
         setLoadingId(null);
     };
 
-    // Separamos los pedidos en columnas (Kanban)
     const pendientes = pedidos.filter(p => p.estado === 'pendiente');
     const preparando = pedidos.filter(p => p.estado === 'preparando');
-    // Para no saturar, mostramos solo los últimos 5 listos o rechazados
     const completados = pedidos.filter(p => p.estado === 'listo' || p.estado === 'rechazado').slice(0, 8);
 
     const TarjetaPedido = ({ ped, columna }: any) => (
@@ -57,13 +54,14 @@ export default function DepositoVentas() {
                 </span>
             </div>
 
-            <h3 className="text-xl font-black text-slate-800 leading-tight mb-2">
-                <span className="text-slate-400 text-base mr-1">{ped.cantidad}x</span> {ped.producto_pedido}
+            <h3 className="text-lg font-black text-slate-800 leading-tight mb-3 flex items-start gap-2">
+                {/* CANTIDAD ESTILIZADA COMO BADGE */}
+                <span className="bg-slate-800 text-white px-2 py-0.5 rounded-md text-sm mt-0.5 whitespace-nowrap">{ped.cantidad}</span>
+                <span className="flex-1">{ped.producto_pedido}</span>
             </h3>
 
             {ped.notas && <p className="text-sm font-medium text-slate-600 bg-amber-50 p-2 rounded-lg italic border border-amber-100 mb-3">"{ped.notas}"</p>}
 
-            {/* BOTONES DE ACCIÓN SEGÚN COLUMNA */}
             {columna === 'pendientes' && (
                 <div className="grid grid-cols-2 gap-2 mt-4">
                     <button onClick={() => cambiarEstado(ped.id, 'preparando')} className="bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-3 py-2 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors">
@@ -75,11 +73,20 @@ export default function DepositoVentas() {
                 </div>
             )}
 
+            {/* NUEVOS BOTONES DE ERROR EN LA COLUMNA PREPARANDO */}
             {columna === 'preparando' && (
-                <div className="mt-4">
+                <div className="mt-4 flex flex-col gap-2">
                     <button onClick={() => cambiarEstado(ped.id, 'listo')} className="w-full bg-emerald-500 text-white hover:bg-emerald-600 px-3 py-3 rounded-xl text-sm font-black uppercase flex items-center justify-center gap-2 transition-colors shadow-md shadow-emerald-500/20 active:scale-95">
                         <Check size={18} /> Listo / Despachar
                     </button>
+                    <div className="grid grid-cols-2 gap-2">
+                        <button onClick={() => cambiarEstado(ped.id, 'pendiente')} className="bg-slate-100 text-slate-600 hover:bg-slate-200 px-3 py-2 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors">
+                            <ArrowLeft size={14} /> Atrás
+                        </button>
+                        <button onClick={() => cambiarEstado(ped.id, 'rechazado')} className="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-2 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors">
+                            <X size={14} /> Cancelar
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -111,10 +118,8 @@ export default function DepositoVentas() {
                 </div>
             </div>
 
-            {/* TABLERO KANBAN */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
 
-                {/* COLUMNA 1: NUEVOS PEDIDOS */}
                 <div className="bg-slate-100/50 rounded-[2rem] p-5 border-2 border-slate-200 flex flex-col">
                     <div className="flex items-center justify-between mb-5 px-2">
                         <h2 className="text-lg font-black text-slate-700 uppercase flex items-center gap-2">
@@ -128,7 +133,6 @@ export default function DepositoVentas() {
                     </div>
                 </div>
 
-                {/* COLUMNA 2: PREPARANDO */}
                 <div className="bg-slate-100/50 rounded-[2rem] p-5 border-2 border-slate-200 flex flex-col">
                     <div className="flex items-center justify-between mb-5 px-2">
                         <h2 className="text-lg font-black text-slate-700 uppercase flex items-center gap-2">
@@ -142,7 +146,6 @@ export default function DepositoVentas() {
                     </div>
                 </div>
 
-                {/* COLUMNA 3: COMPLETADOS / RECHAZADOS */}
                 <div className="bg-slate-100/50 rounded-[2rem] p-5 border-2 border-slate-200 flex flex-col opacity-70 hover:opacity-100 transition-opacity">
                     <div className="flex items-center justify-between mb-5 px-2">
                         <h2 className="text-lg font-black text-slate-700 uppercase flex items-center gap-2">
