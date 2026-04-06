@@ -31,74 +31,80 @@ export default function DepositoVentas() {
     const preparando = pedidos.filter(p => p.estado === 'preparando');
     const completados = pedidos.filter(p => p.estado === 'listo' || p.estado === 'rechazado').slice(0, 8);
 
-    const TarjetaPedido = ({ ped, columna }: any) => (
-        <div className={`bg-white p-5 rounded-2xl border-l-4 shadow-sm relative overflow-hidden transition-all ${ped.urgencia === 'urgente' ? 'border-l-red-500' : 'border-l-indigo-500'}`}>
-            {loadingId === ped.id && (
-                <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center">
-                    <RefreshCw className="animate-spin text-indigo-500" size={24} />
-                </div>
-            )}
+    const TarjetaPedido = ({ ped, columna }: any) => {
+        const isMultiple = ped.cantidad.includes('Ítems');
 
-            <div className="flex justify-between items-start mb-3">
-                {ped.urgencia === 'urgente' ? (
-                    <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-[10px] font-black uppercase flex items-center gap-1 animate-pulse">
-                        <Flame size={12} /> URGENTE
-                    </span>
-                ) : (
-                    <span className="bg-slate-100 text-slate-500 px-2 py-1 rounded text-[10px] font-black uppercase">
-                        Normal
-                    </span>
+        return (
+            <div className={`bg-white p-5 rounded-2xl border-l-4 shadow-sm relative overflow-hidden transition-all ${ped.urgencia === 'urgente' ? 'border-l-red-500' : 'border-l-indigo-500'}`}>
+                {loadingId === ped.id && (
+                    <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center">
+                        <RefreshCw className="animate-spin text-indigo-500" size={24} />
+                    </div>
                 )}
-                <span className="text-xs font-bold text-slate-400">
-                    {new Date(ped.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-            </div>
 
-            <h3 className="text-lg font-black text-slate-800 leading-tight mb-3 flex items-start gap-2">
-                {/* CANTIDAD ESTILIZADA COMO BADGE */}
-                <span className="bg-slate-800 text-white px-2 py-0.5 rounded-md text-sm mt-0.5 whitespace-nowrap">{ped.cantidad}</span>
-                <span className="flex-1">{ped.producto_pedido}</span>
-            </h3>
-
-            {ped.notas && <p className="text-sm font-medium text-slate-600 bg-amber-50 p-2 rounded-lg italic border border-amber-100 mb-3">"{ped.notas}"</p>}
-
-            {columna === 'pendientes' && (
-                <div className="grid grid-cols-2 gap-2 mt-4">
-                    <button onClick={() => cambiarEstado(ped.id, 'preparando')} className="bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-3 py-2 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors">
-                        <Play size={14} /> Preparar
-                    </button>
-                    <button onClick={() => cambiarEstado(ped.id, 'rechazado')} className="bg-red-50 text-red-700 hover:bg-red-600 hover:text-white px-3 py-2 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors">
-                        <X size={14} /> Sin Stock
-                    </button>
+                <div className="flex justify-between items-start mb-3">
+                    {ped.urgencia === 'urgente' ? (
+                        <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-[10px] font-black uppercase flex items-center gap-1 animate-pulse">
+                            <Flame size={12} /> URGENTE
+                        </span>
+                    ) : (
+                        <span className="bg-slate-100 text-slate-500 px-2 py-1 rounded text-[10px] font-black uppercase">
+                            Normal
+                        </span>
+                    )}
+                    <span className="text-xs font-bold text-slate-400">
+                        {new Date(ped.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                 </div>
-            )}
 
-            {/* NUEVOS BOTONES DE ERROR EN LA COLUMNA PREPARANDO */}
-            {columna === 'preparando' && (
-                <div className="mt-4 flex flex-col gap-2">
-                    <button onClick={() => cambiarEstado(ped.id, 'listo')} className="w-full bg-emerald-500 text-white hover:bg-emerald-600 px-3 py-3 rounded-xl text-sm font-black uppercase flex items-center justify-center gap-2 transition-colors shadow-md shadow-emerald-500/20 active:scale-95">
-                        <Check size={18} /> Listo / Despachar
-                    </button>
-                    <div className="grid grid-cols-2 gap-2">
-                        <button onClick={() => cambiarEstado(ped.id, 'pendiente')} className="bg-slate-100 text-slate-600 hover:bg-slate-200 px-3 py-2 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors">
-                            <ArrowLeft size={14} /> Atrás
+                <h3 className="text-lg font-black text-slate-800 leading-tight mb-3 flex items-start gap-2">
+                    {/* Badge dinámico para pedido múltiple o simple */}
+                    <span className={`px-2 py-0.5 rounded-md text-sm mt-0.5 whitespace-nowrap ${isMultiple ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-white'}`}>
+                        {ped.cantidad}
+                    </span>
+                    {/* MAGIA ACÁ: whitespace-pre-wrap respeta los saltos de línea para crear la lista */}
+                    <span className="flex-1 whitespace-pre-wrap leading-snug">{ped.producto_pedido}</span>
+                </h3>
+
+                {ped.notas && <p className="text-sm font-medium text-slate-600 bg-amber-50 p-2 rounded-lg italic border border-amber-100 mb-3">"{ped.notas}"</p>}
+
+                {columna === 'pendientes' && (
+                    <div className="grid grid-cols-2 gap-2 mt-4">
+                        <button onClick={() => cambiarEstado(ped.id, 'preparando')} className="bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-3 py-2 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors">
+                            <Play size={14} /> Preparar
                         </button>
-                        <button onClick={() => cambiarEstado(ped.id, 'rechazado')} className="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-2 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors">
-                            <X size={14} /> Cancelar
+                        <button onClick={() => cambiarEstado(ped.id, 'rechazado')} className="bg-red-50 text-red-700 hover:bg-red-600 hover:text-white px-3 py-2 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors">
+                            <X size={14} /> Sin Stock
                         </button>
                     </div>
-                </div>
-            )}
+                )}
 
-            {columna === 'completados' && (
-                <div className="mt-2 text-right">
-                    <span className={`text-[10px] font-black uppercase ${ped.estado === 'listo' ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {ped.estado === 'listo' ? '✔ Entregado' : '✖ Cancelado'}
-                    </span>
-                </div>
-            )}
-        </div>
-    );
+                {columna === 'preparando' && (
+                    <div className="mt-4 flex flex-col gap-2">
+                        <button onClick={() => cambiarEstado(ped.id, 'listo')} className="w-full bg-emerald-500 text-white hover:bg-emerald-600 px-3 py-3 rounded-xl text-sm font-black uppercase flex items-center justify-center gap-2 transition-colors shadow-md shadow-emerald-500/20 active:scale-95">
+                            <Check size={18} /> Listo / Despachar
+                        </button>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button onClick={() => cambiarEstado(ped.id, 'pendiente')} className="bg-slate-100 text-slate-600 hover:bg-slate-200 px-3 py-2 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors">
+                                <ArrowLeft size={14} /> Atrás
+                            </button>
+                            <button onClick={() => cambiarEstado(ped.id, 'rechazado')} className="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-2 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors">
+                                <X size={14} /> Cancelar
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {columna === 'completados' && (
+                    <div className="mt-2 text-right">
+                        <span className={`text-[10px] font-black uppercase ${ped.estado === 'listo' ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {ped.estado === 'listo' ? '✔ Entregado' : '✖ Cancelado'}
+                        </span>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     return (
         <div className="max-w-7xl mx-auto p-4 lg:p-8 font-sans text-slate-800 min-h-screen flex flex-col">
