@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Loader2, MessageSquareText, Instagram, Info, X } from 'lucide-react';
+import { Loader2, MessageSquareText, Info, X } from 'lucide-react';
 
 const convertirUrlDrive = (url: string) => {
     if (!url || !url.includes('drive.google.com')) return url;
@@ -12,6 +12,15 @@ const convertirUrlDrive = (url: string) => {
     if (match) fileId = match[1];
     return fileId ? `https://drive.google.com/uc?id=${fileId}` : url;
 };
+
+// NUESTRO ÍCONO DE INSTAGRAM PERSONALIZADO (Para evitar el error de Vercel)
+const InstagramIcon = ({ size = 14 }: { size?: number }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+        <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+    </svg>
+);
 
 export default function RevistaPublica() {
     const { id } = useParams();
@@ -410,7 +419,7 @@ function ItemContent({ item, settings }: { item: any, settings: any }) {
                     </a>
                     {igLink !== '#' && (
                         <a href={igLink} target="_blank" className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-[#E1306C]/10 text-[#C13584] rounded-lg text-[10px] font-bold hover:bg-[#E1306C]/20 transition-colors uppercase tracking-wider" onClick={(e) => e.stopPropagation()}>
-                            <Instagram size={14} /> Instagram
+                            <InstagramIcon size={14} /> Instagram
                         </a>
                     )}
                 </div>
@@ -422,6 +431,7 @@ function ItemContent({ item, settings }: { item: any, settings: any }) {
 function EndCover({ bg }: { bg: string }) {
     return (
         <div className="flex flex-col items-center justify-center h-full w-full bg-white text-center p-8 relative">
+            <div className="absolute top-0 left-0 h-full w-3 bg-gradient-to-r from-black/5 to-transparent z-10"></div>
             <h2 className="text-3xl md:text-5xl font-black text-slate-200 uppercase tracking-widest mb-4">FIN</h2>
             <div className="w-16 h-1 bg-slate-200 rounded-full mb-8"></div>
             <p className="text-sm md:text-base font-bold text-slate-400">Gracias por ver nuestro catálogo.</p>
