@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Store, Send, Flame, Minus, Plus, Clock, CheckCircle2, XCircle, RefreshCw, PackageSearch, ListPlus, Trash2, RotateCcw, X, MessageSquareWarning } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { crearPedidoAction, obtenerPedidosActivosAction, actualizarEstadoPedidoAction, eliminarPedidoAction, responderProblemaAction } from '../actions';
+import { crearPedidoAction, obtenerPedidosActivosAction, actualizarEstadoPedidoAction, eliminarPedidoAction, responderProblemaAction, obtenerConfiguracionPedidosAction } from '../actions';
 
 export default function SalonVentas() {
     const [productosCatalogo, setProductosCatalogo] = useState<any[]>([]);
@@ -12,26 +12,34 @@ export default function SalonVentas() {
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
-    const [carrito, setCarrito] = useState<{ id: number, producto: string, cantidad: number, unidad: string, notaItem: string }[]>([]);
+    // Estado de configuración local
+    const [config, setConfig] = useState<any>(null);
+    const [opcionesUnidades, setOpcionesUnidades] = useState<string[]>(['Unidades', 'Metros', 'Kilos']);
 
+    const [carrito, setCarrito] = useState<{ id: number, producto: string, cantidad: number, unidad: string, notaItem: string }[]>([]);
     const [productoPedido, setProductoPedido] = useState('');
     const [cantidad, setCantidad] = useState(1);
-    const [unidad, setUnidad] = useState('unidades');
+    const [unidad, setUnidad] = useState('');
     const [unidadCustom, setUnidadCustom] = useState('');
     const [notaItem, setNotaItem] = useState('');
-
     const [urgencia, setUrgencia] = useState('normal');
     const [notas, setNotas] = useState('');
-
-    // Estado para manejar las respuestas escritas a cada pedido pausado
     const [respuestas, setRespuestas] = useState<Record<string, string>>({});
 
     useEffect(() => {
-        async function fetchCatalogo() {
+        async function fetchInitData() {
             const { data } = await supabase.from('products').select('name, sku').limit(200);
             if (data) setProductosCatalogo(data);
+
+            const confRes = await obtenerConfiguracionPedidosAction();
+            if (confRes.success && confRes.data) {
+                setConfig(confRes.data);
+                const arrayUnidades = confRes.data.unidades_medida ? confRes.data.unidades_medida.split(',').map((u: string) => u.trim()) : ['Unidades', 'Metros', 'Kilos'];
+                setOpcionesUnidades(arrayUnidades);
+                setUnidad(arrayUnidades[0] || 'unidades');
+            }
         }
-        fetchCatalogo();
+        fetchInitData();
         cargarPedidos();
         const radar = setInterval(cargarPedidos, 5000);
         return () => clearInterval(radar);
@@ -40,7 +48,9 @@ export default function SalonVentas() {
     const cargarPedidos = async () => {
         setRefreshing(true);
         const res = await obtenerPedidosActivosAction();
-        if (res.success && res.data) setPedidos(res.data);
+        if (res.success && res.data) {
+            setPedidos(res.data);
+        }
         setRefreshing(false);
     };
 
@@ -50,7 +60,7 @@ export default function SalonVentas() {
         if (unidad === 'otro' && !unitToSave) return alert('Especificá la unidad de medida.');
 
         setCarrito([...carrito, { id: Date.now(), producto: productoPedido, cantidad, unidad: unitToSave, notaItem: notaItem.trim() }]);
-        setProductoPedido(''); setCantidad(1); setUnidad('unidades'); setUnidadCustom(''); setNotaItem('');
+        setProductoPedido(''); setCantidad(1); setUnidadCustom(''); setNotaItem('');
     };
 
     const eliminarDelCarrito = (id: number) => setCarrito(carrito.filter(item => item.id !== id));
@@ -59,7 +69,7 @@ export default function SalonVentas() {
         let listaFinal = [...carrito];
         if (productoPedido.trim() !== '') {
             let unitToSave = unidad === 'otro' ? unidadCustom.trim() : unidad;
-            listaFinal.push({ id: Date.now(), producto: productoPedido, cantidad, unidad: unitToSave || 'unidades', notaItem: notaItem.trim() });
+            listaFinal.push({ id: Date.now(), producto: productoPedido, cantidad, unidad: unitToSave || opcionesUnidades[0], notaItem: notaItem.trim() });
         }
         if (listaFinal.length === 0) return alert('Agregá al menos un artículo al pedido.');
         setLoading(true);
@@ -76,7 +86,7 @@ export default function SalonVentas() {
         const res = await crearPedidoAction({ producto_pedido: productoFinal, cantidad: cantidadFinal, urgencia, notas });
 
         if (res.success) {
-            setCarrito([]); setProductoPedido(''); setCantidad(1); setUnidad('unidades'); setUnidadCustom(''); setNotaItem(''); setUrgencia('normal'); setNotas('');
+            setCarrito([]); setProductoPedido(''); setCantidad(1); setUnidadCustom(''); setNotaItem(''); setUrgencia('normal'); setNotas('');
             cargarPedidos();
         }
         setLoading(false);
@@ -106,10 +116,19 @@ export default function SalonVentas() {
         if (!respuestas[id]?.trim()) return;
         setLoading(true);
         await responderProblemaAction(id, respuestas[id]);
-        setRespuestas(prev => ({ ...prev, [id]: '' })); // Limpiamos el input
+        setRespuestas(prev => ({ ...prev, [id]: '' }));
         await cargarPedidos();
         setLoading(false);
     };
+
+    // Procesamiento TTL
+    const pedidosFiltrados = pedidos.filter(ped => {
+        if (config && config.auto_limpieza_horas > 0 && (ped.estado === 'listo' || ped.estado === 'rechazado')) {
+            const horasPasadas = (new Date().getTime() - new Date(ped.created_at).getTime()) / (1000 * 60 * 60);
+            return horasPasadas <= config.auto_limpieza_horas;
+        }
+        return true;
+    });
 
     const getEstadoUI = (estado: string) => {
         switch (estado) {
@@ -142,7 +161,6 @@ export default function SalonVentas() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* PANEL DE PEDIDO NUEVO (Mismo que antes) */}
                 <div className="lg:col-span-5 space-y-6">
                     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xl shadow-indigo-900/5">
                         <h2 className="text-lg font-bold text-slate-900 mb-5 border-b border-slate-100 pb-3">Armar Solicitud</h2>
@@ -151,11 +169,7 @@ export default function SalonVentas() {
                             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-4">
                                 <div>
                                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">1. Seleccionar Artículo</label>
-                                    <input
-                                        list="catalogo" type="text" value={productoPedido} onChange={(e) => setProductoPedido(e.target.value)}
-                                        placeholder="Ej: Termo Stanley, Rollos de Seda..."
-                                        className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium text-sm"
-                                    />
+                                    <input list="catalogo" type="text" value={productoPedido} onChange={(e) => setProductoPedido(e.target.value)} placeholder="Ej: Termo Stanley, Rollos..." className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium text-sm" />
                                     <datalist id="catalogo">
                                         {productosCatalogo.map((p, i) => <option key={i} value={p.sku ? `${p.sku} - ${p.name}` : p.name} />)}
                                     </datalist>
@@ -170,14 +184,10 @@ export default function SalonVentas() {
                                             <button onClick={() => setCantidad(c => c + 1)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors"><Plus size={16} /></button>
                                         </div>
 
-                                        <select value={unidad} onChange={(e) => setUnidad(e.target.value)} className="w-full sm:flex-1 p-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-600 text-sm">
-                                            <option value="unidades">Unidades</option>
-                                            <option value="metros">Metros</option>
-                                            <option value="kilos">Kilos</option>
-                                            <option value="litros">Litros</option>
-                                            <option value="cajas">Cajas</option>
-                                            <option value="rollos">Rollos</option>
-                                            <option value="pares">Pares</option>
+                                        <select value={unidad} onChange={(e) => setUnidad(e.target.value)} className="w-full sm:flex-1 p-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-600 text-sm capitalize">
+                                            {opcionesUnidades.map((op, idx) => (
+                                                <option key={idx} value={op.toLowerCase()}>{op}</option>
+                                            ))}
                                             <option value="otro">Otra medida...</option>
                                         </select>
                                     </div>
@@ -190,11 +200,7 @@ export default function SalonVentas() {
 
                                 <div>
                                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">3. Aclaración del artículo (Opcional)</label>
-                                    <input
-                                        type="text" value={notaItem} onChange={e => setNotaItem(e.target.value)}
-                                        placeholder="Ej: Talle L, Color Azul..."
-                                        className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm"
-                                    />
+                                    <input type="text" value={notaItem} onChange={e => setNotaItem(e.target.value)} placeholder="Ej: Talle L, Color Azul..." className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm" />
                                 </div>
 
                                 <button onClick={agregarAlCarrito} className="w-full bg-slate-800 hover:bg-slate-900 text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95">
@@ -210,8 +216,7 @@ export default function SalonVentas() {
                                             <li key={item.id} className="flex justify-between items-start bg-white p-2 rounded-lg border border-indigo-50 shadow-sm text-sm">
                                                 <div className="flex flex-col">
                                                     <span className="font-bold text-slate-700">
-                                                        <span className="text-indigo-600 mr-2">{item.cantidad} {item.unidad}</span>
-                                                        {item.producto}
+                                                        <span className="text-indigo-600 mr-2">{item.cantidad} {item.unidad}</span>{item.producto}
                                                     </span>
                                                     {item.notaItem && <span className="text-[11px] text-slate-500 italic mt-0.5">👉 {item.notaItem}</span>}
                                                 </div>
@@ -245,7 +250,6 @@ export default function SalonVentas() {
                     </div>
                 </div>
 
-                {/* PANEL DE HISTORIAL EN VIVO */}
                 <div className="lg:col-span-7">
                     <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 h-full flex flex-col">
                         <h2 className="text-lg font-bold text-slate-900 mb-5 flex items-center gap-2">
@@ -253,10 +257,10 @@ export default function SalonVentas() {
                         </h2>
 
                         <div className="flex-1 overflow-y-auto pr-2 space-y-3">
-                            {pedidos.length === 0 ? (
-                                <div className="text-center text-slate-400 py-10 font-medium text-sm">No hiciste ningún pedido hoy.</div>
+                            {pedidosFiltrados.length === 0 ? (
+                                <div className="text-center text-slate-400 py-10 font-medium text-sm">El radar está limpio.</div>
                             ) : (
-                                pedidos.map((ped) => {
+                                pedidosFiltrados.map((ped) => {
                                     const ui = getEstadoUI(ped.estado);
                                     const isMultiple = ped.cantidad.includes('Ítems');
                                     const isPausado = ped.estado === 'pausado';
@@ -265,14 +269,10 @@ export default function SalonVentas() {
                                         <div key={ped.id} className={`bg-white p-4 rounded-2xl border-l-4 transition-all ${ui.border} ${ped.urgencia === 'urgente' && ped.estado === 'pendiente' ? 'shadow-md shadow-red-500/10 border-l-red-500' : 'shadow-sm'} ${isPausado ? 'bg-amber-50' : ''}`}>
                                             <div className="flex justify-between items-start mb-2">
                                                 <div className="flex items-center gap-2">
-                                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase flex items-center gap-1 ${ui.bg} ${ui.color}`}>
-                                                        {ui.icon} {ui.texto}
-                                                    </span>
+                                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase flex items-center gap-1 ${ui.bg} ${ui.color}`}>{ui.icon} {ui.texto}</span>
                                                     {ped.urgencia === 'urgente' && <span className="bg-red-500 text-white px-1.5 py-0.5 rounded text-[9px] font-black uppercase flex items-center gap-1"><Flame size={10} /> Urgente</span>}
                                                 </div>
-                                                <span className="text-[11px] font-bold text-slate-400">
-                                                    {new Date(ped.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
+                                                <span className="text-[11px] font-bold text-slate-400">{new Date(ped.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                             </div>
 
                                             <div className="flex items-start gap-2.5">
@@ -282,9 +282,7 @@ export default function SalonVentas() {
                                                         if (!line.trim()) return null;
                                                         const isNote = line.includes('👉');
                                                         return (
-                                                            <div key={i} className={`${isNote ? 'text-[11px] font-medium text-slate-500 italic mt-0.5 mb-1.5' : 'text-sm font-bold text-slate-800 leading-snug mt-0.5'}`}>
-                                                                {line}
-                                                            </div>
+                                                            <div key={i} className={`${isNote ? 'text-[11px] font-medium text-slate-500 italic mt-0.5 mb-1.5' : 'text-sm font-bold text-slate-800 leading-snug mt-0.5'}`}>{line}</div>
                                                         );
                                                     })}
                                                 </div>
@@ -292,42 +290,24 @@ export default function SalonVentas() {
 
                                             {ped.notas && <p className="text-[11px] font-medium text-slate-500 mt-2 bg-white/50 px-2.5 py-1.5 rounded-lg border border-slate-100 italic">Nota general: {ped.notas}</p>}
 
-                                            {/* ZONA DE CONVERSACIÓN (ALERTA AMARILLA) */}
                                             {(ped.mensaje_deposito || ped.respuesta_salon) && (
                                                 <div className="mt-3 bg-white border border-amber-200 rounded-xl p-3 shadow-inner space-y-3">
                                                     {ped.mensaje_deposito && (
                                                         <div>
-                                                            <span className="text-[9px] font-black uppercase text-amber-600 block mb-0.5 flex items-center gap-1">
-                                                                <MessageSquareWarning size={10} /> Depósito reporta:
-                                                            </span>
+                                                            <span className="text-[9px] font-black uppercase text-amber-600 block mb-0.5 flex items-center gap-1"><MessageSquareWarning size={10} /> Depósito reporta:</span>
                                                             <p className="text-xs font-bold text-slate-700">{ped.mensaje_deposito}</p>
                                                         </div>
                                                     )}
-
-                                                    {/* Si el salón ya respondió, mostramos la respuesta */}
                                                     {ped.respuesta_salon && (
                                                         <div className="border-t border-amber-100 pt-2">
                                                             <span className="text-[9px] font-black uppercase text-indigo-600 block mb-0.5">Ya respondiste:</span>
                                                             <p className="text-xs font-bold text-slate-700">{ped.respuesta_salon}</p>
                                                         </div>
                                                     )}
-
-                                                    {/* Si está pausado, permitimos que el salón envíe una respuesta ahora */}
                                                     {isPausado && (
                                                         <div className="flex gap-2 mt-2 pt-2 border-t border-amber-100">
-                                                            <input
-                                                                type="text"
-                                                                value={respuestas[ped.id] || ''}
-                                                                onChange={e => setRespuestas({ ...respuestas, [ped.id]: e.target.value })}
-                                                                placeholder="Escribí tu respuesta..."
-                                                                className="flex-1 px-3 py-1.5 text-xs bg-amber-50 border border-amber-200 rounded-lg outline-none focus:ring-2 focus:ring-amber-500/20"
-                                                            />
-                                                            <button
-                                                                onClick={() => enviarRespuesta(ped.id)}
-                                                                className="bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-amber-600 flex items-center gap-1 transition-colors"
-                                                            >
-                                                                Responder <Send size={12} />
-                                                            </button>
+                                                            <input type="text" value={respuestas[ped.id] || ''} onChange={e => setRespuestas({ ...respuestas, [ped.id]: e.target.value })} placeholder="Escribí tu respuesta..." className="flex-1 px-3 py-1.5 text-xs bg-amber-50 border border-amber-200 rounded-lg outline-none focus:ring-2 focus:ring-amber-500/20" />
+                                                            <button onClick={() => enviarRespuesta(ped.id)} className="bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-amber-600 flex items-center gap-1 transition-colors">Responder <Send size={12} /></button>
                                                         </div>
                                                     )}
                                                 </div>
@@ -335,18 +315,12 @@ export default function SalonVentas() {
 
                                             <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-end gap-3">
                                                 {ped.estado === 'pendiente' && (
-                                                    <button onClick={() => handleCancelarPedido(ped.id)} className="text-[11px] font-bold flex items-center gap-1 text-slate-400 hover:text-red-500 transition-colors">
-                                                        <X size={12} /> Cancelar
-                                                    </button>
+                                                    <button onClick={() => handleCancelarPedido(ped.id)} className="text-[11px] font-bold flex items-center gap-1 text-slate-400 hover:text-red-500 transition-colors"><X size={12} /> Cancelar</button>
                                                 )}
                                                 {(ped.estado === 'listo' || ped.estado === 'rechazado') && (
                                                     <>
-                                                        <button onClick={() => handleBorrarHistorial(ped.id)} className="text-[11px] font-bold flex items-center gap-1 text-slate-400 hover:text-red-500 transition-colors mr-auto">
-                                                            <Trash2 size={12} /> Ocultar
-                                                        </button>
-                                                        <button onClick={() => handleRehacerPedido(ped)} className="text-[11px] font-bold flex items-center gap-1 text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2 py-1 rounded-md transition-colors">
-                                                            <RotateCcw size={12} /> Pedir lo mismo
-                                                        </button>
+                                                        <button onClick={() => handleBorrarHistorial(ped.id)} className="text-[11px] font-bold flex items-center gap-1 text-slate-400 hover:text-red-500 transition-colors mr-auto"><Trash2 size={12} /> Ocultar</button>
+                                                        <button onClick={() => handleRehacerPedido(ped)} className="text-[11px] font-bold flex items-center gap-1 text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2 py-1 rounded-md transition-colors"><RotateCcw size={12} /> Pedir lo mismo</button>
                                                     </>
                                                 )}
                                             </div>

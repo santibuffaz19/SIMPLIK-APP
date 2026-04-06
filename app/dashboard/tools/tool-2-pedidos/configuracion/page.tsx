@@ -15,6 +15,9 @@ export default function ConfiguracionToolPedidos() {
     const [alertasSonoras, setAlertasSonoras] = useState(true);
     const [unidadesMedida, setUnidadesMedida] = useState('');
     const [respuestasRapidas, setRespuestasRapidas] = useState('');
+
+    // Lógica condicional para el TTL
+    const [autoLimpiezaActiva, setAutoLimpiezaActiva] = useState(true);
     const [autoLimpiezaHoras, setAutoLimpiezaHoras] = useState(12);
 
     useEffect(() => {
@@ -25,7 +28,14 @@ export default function ConfiguracionToolPedidos() {
                 setAlertasSonoras(res.data.alertas_sonoras);
                 setUnidadesMedida(res.data.unidades_medida || '');
                 setRespuestasRapidas(res.data.respuestas_rapidas || '');
-                setAutoLimpiezaHoras(res.data.auto_limpieza_horas || 12);
+
+                if (res.data.auto_limpieza_horas === 0) {
+                    setAutoLimpiezaActiva(false);
+                    setAutoLimpiezaHoras(12); // Valor por defecto visual
+                } else {
+                    setAutoLimpiezaActiva(true);
+                    setAutoLimpiezaHoras(res.data.auto_limpieza_horas || 12);
+                }
             }
             setLoading(false);
         }
@@ -38,7 +48,7 @@ export default function ConfiguracionToolPedidos() {
             alertas_sonoras: alertasSonoras,
             unidades_medida: unidadesMedida,
             respuestas_rapidas: respuestasRapidas,
-            auto_limpieza_horas: autoLimpiezaHoras
+            auto_limpieza_horas: autoLimpiezaActiva ? autoLimpiezaHoras : 0
         });
 
         if (res.success) {
@@ -74,31 +84,28 @@ export default function ConfiguracionToolPedidos() {
             )}
 
             <div className="space-y-8">
-                {/* UNIDADES DE MEDIDA */}
                 <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                     <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
                         <Ruler className="text-indigo-500" size={24} /> Unidades de Medida
                     </h2>
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2">Desplegable para el Salón de Ventas</label>
-                        <p className="text-xs text-slate-500 mb-3">Escribí las opciones separadas por coma. Estas aparecerán al momento de armar un pedido.</p>
-                        <textarea rows={2} value={unidadesMedida} onChange={(e) => setUnidadesMedida(e.target.value)} placeholder="Ej: Unidades, Metros, Kilos..." className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none font-medium text-slate-700" />
+                        <p className="text-xs text-slate-500 mb-3">Escribí las opciones separadas por coma.</p>
+                        <textarea rows={2} value={unidadesMedida} onChange={(e) => setUnidadesMedida(e.target.value)} placeholder="Ej: Unidades, Metros, Kilos, Rollos..." className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none font-medium text-slate-700" />
                     </div>
                 </section>
 
-                {/* RESPUESTAS RÁPIDAS */}
                 <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                     <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
                         <MessageSquare className="text-amber-500" size={24} /> Respuestas Rápidas (Depósito)
                     </h2>
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2">Botones de respuesta inmediata</label>
-                        <p className="text-xs text-slate-500 mb-3">Separalas por coma. El depósito podrá usarlas para responder dudas con un solo clic.</p>
-                        <textarea rows={2} value={respuestasRapidas} onChange={(e) => setRespuestasRapidas(e.target.value)} placeholder="Ej: Faltan verificar, Demora 15 min..." className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500/20 resize-none font-medium text-slate-700" />
+                        <p className="text-xs text-slate-500 mb-3">Separalas por coma. Útiles para agilizar la comunicación operativa.</p>
+                        <textarea rows={2} value={respuestasRapidas} onChange={(e) => setRespuestasRapidas(e.target.value)} placeholder="Ej: Falta verificar en sistema, Demora 15 min..." className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500/20 resize-none font-medium text-slate-700" />
                     </div>
                 </section>
 
-                {/* ALERTAS Y LIMPIEZA */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                         <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
@@ -108,7 +115,7 @@ export default function ConfiguracionToolPedidos() {
                             <input type="checkbox" checked={alertasSonoras} onChange={(e) => setAlertasSonoras(e.target.checked)} className="w-5 h-5 mt-1 text-orange-600 rounded" />
                             <div>
                                 <span className="text-base font-bold text-slate-800 block">Alerta Sonora (Depósito)</span>
-                                <span className="text-xs text-slate-500 block mt-1">Reproducir un sonido cuando ingrese un pedido nuevo o una urgencia.</span>
+                                <span className="text-xs text-slate-500 block mt-1">Generar tono al recibir nuevas comandas.</span>
                             </div>
                         </label>
                     </section>
@@ -117,13 +124,21 @@ export default function ConfiguracionToolPedidos() {
                         <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
                             <Timer className="text-emerald-500" size={24} /> Historial
                         </h2>
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Limpieza Automática (TTL)</label>
-                            <p className="text-xs text-slate-500 mb-3">Tiempo en horas para ocultar pedidos completados.</p>
-                            <div className="flex items-center gap-3">
-                                <input type="number" value={autoLimpiezaHoras} onChange={(e) => setAutoLimpiezaHoras(Number(e.target.value))} className="w-24 p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-black outline-none focus:ring-2 focus:ring-emerald-500/20" />
-                                <span className="font-bold text-slate-600">Horas</span>
-                            </div>
+                        <div className="space-y-4">
+                            <label className="flex items-start gap-4 cursor-pointer group">
+                                <input type="checkbox" checked={autoLimpiezaActiva} onChange={(e) => setAutoLimpiezaActiva(e.target.checked)} className="w-5 h-5 mt-0.5 text-emerald-600 rounded" />
+                                <div>
+                                    <span className="text-sm font-bold text-slate-800 block">Ocultar pedidos antiguos automáticamente</span>
+                                    <span className="text-xs text-slate-500 block">Si está desactivado, el historial será infinito.</span>
+                                </div>
+                            </label>
+
+                            {autoLimpiezaActiva && (
+                                <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 animate-in fade-in">
+                                    <input type="number" value={autoLimpiezaHoras} onChange={(e) => setAutoLimpiezaHoras(Number(e.target.value))} className="w-20 p-2 bg-white border border-slate-200 rounded-lg text-center font-black outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                                    <span className="font-bold text-sm text-slate-600">Horas límite</span>
+                                </div>
+                            )}
                         </div>
                     </section>
                 </div>
