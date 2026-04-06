@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import { Loader2, Save, ArrowLeft, ShieldCheck, Bell, Ruler, MessageSquareFast, Timer, Package } from 'lucide-react';
+import { Loader2, Save, ArrowLeft, ShieldCheck, Bell, Ruler, MessageSquare, Timer, Package } from 'lucide-react';
 import { obtenerConfiguracionPedidosAction, guardarConfiguracionPedidosAction } from '../actions';
 
 export default function ConfiguracionToolPedidos() {
@@ -89,7 +89,7 @@ export default function ConfiguracionToolPedidos() {
                 {/* RESPUESTAS RÁPIDAS */}
                 <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                     <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
-                        <MessageSquareFast className="text-amber-500" size={24} /> Respuestas Rápidas (Depósito)
+                        <MessageSquare className="text-amber-500" size={24} /> Respuestas Rápidas (Depósito)
                     </h2>
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2">Botones de respuesta inmediata</label>
