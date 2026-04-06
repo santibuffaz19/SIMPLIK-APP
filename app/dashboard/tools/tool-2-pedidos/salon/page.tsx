@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Store, Send, Flame, Minus, Plus, Clock, CheckCircle2, XCircle, RefreshCw, PackageSearch, ListPlus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Store, Send, Flame, Minus, Plus, Clock, CheckCircle2, XCircle, RefreshCw, PackageSearch, ListPlus, Trash2, RotateCcw, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { crearPedidoAction, obtenerPedidosActivosAction } from '../actions';
+import { crearPedidoAction, obtenerPedidosActivosAction, actualizarEstadoPedidoAction, eliminarPedidoAction } from '../actions';
 
 export default function SalonVentas() {
     const [productosCatalogo, setProductosCatalogo] = useState<any[]>([]);
@@ -12,14 +12,15 @@ export default function SalonVentas() {
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
-    // ESTADO DEL CARRITO MULTIPRODUCTO
-    const [carrito, setCarrito] = useState<{ id: number, producto: string, cantidad: number, unidad: string }[]>([]);
+    // ESTADO DEL CARRITO MULTIPRODUCTO (Ahora con notas por ítem)
+    const [carrito, setCarrito] = useState<{ id: number, producto: string, cantidad: number, unidad: string, notaItem: string }[]>([]);
 
     // Formulario actual
     const [productoPedido, setProductoPedido] = useState('');
     const [cantidad, setCantidad] = useState(1);
     const [unidad, setUnidad] = useState('unidades');
     const [unidadCustom, setUnidadCustom] = useState('');
+    const [notaItem, setNotaItem] = useState(''); // NUEVO: Nota por producto
 
     const [urgencia, setUrgencia] = useState('normal');
     const [notas, setNotas] = useState('');
@@ -43,7 +44,6 @@ export default function SalonVentas() {
         setRefreshing(false);
     };
 
-    // Función para agregar el input actual a la lista
     const agregarAlCarrito = () => {
         if (!productoPedido.trim()) return alert('Escribí un producto antes de agregarlo.');
 
@@ -54,14 +54,15 @@ export default function SalonVentas() {
             id: Date.now(),
             producto: productoPedido,
             cantidad,
-            unidad: unitToSave
+            unidad: unitToSave,
+            notaItem: notaItem.trim()
         }]);
 
-        // Reseteamos los campos para que pueda cargar el siguiente rápido
         setProductoPedido('');
         setCantidad(1);
         setUnidad('unidades');
         setUnidadCustom('');
+        setNotaItem('');
     };
 
     const eliminarDelCarrito = (id: number) => {
@@ -69,36 +70,28 @@ export default function SalonVentas() {
     };
 
     const handleEnviarPedido = async () => {
-        // Armamos la lista final (por si escribió algo pero no tocó "Sumar a la lista")
         let listaFinal = [...carrito];
         if (productoPedido.trim() !== '') {
             let unitToSave = unidad === 'otro' ? unidadCustom.trim() : unidad;
-            listaFinal.push({ id: Date.now(), producto: productoPedido, cantidad, unidad: unitToSave || 'unidades' });
+            listaFinal.push({ id: Date.now(), producto: productoPedido, cantidad, unidad: unitToSave || 'unidades', notaItem: notaItem.trim() });
         }
 
         if (listaFinal.length === 0) return alert('Agregá al menos un artículo al pedido.');
 
         setLoading(true);
 
-        // FORMATEO MÁGICO PARA EL DEPÓSITO
         let cantidadFinal = '';
         let productoFinal = '';
 
         if (listaFinal.length === 1) {
             cantidadFinal = `${listaFinal[0].cantidad} ${listaFinal[0].unidad}`;
-            productoFinal = listaFinal[0].producto;
+            productoFinal = listaFinal[0].producto + (listaFinal[0].notaItem ? ` \n👉 Aclaración: ${listaFinal[0].notaItem}` : '');
         } else {
-            cantidadFinal = `${listaFinal.length} Ítems`; // Badge especial
-            // Armamos un texto con saltos de línea (\n)
-            productoFinal = listaFinal.map(item => `• ${item.cantidad} ${item.unidad} - ${item.producto}`).join('\n');
+            cantidadFinal = `${listaFinal.length} Ítems`;
+            productoFinal = listaFinal.map(item => `• ${item.cantidad} ${item.unidad} - ${item.producto}${item.notaItem ? ` \n   👉 Aclaración: ${item.notaItem}` : ''}`).join('\n\n');
         }
 
-        const res = await crearPedidoAction({
-            producto_pedido: productoFinal,
-            cantidad: cantidadFinal,
-            urgencia,
-            notas
-        });
+        const res = await crearPedidoAction({ producto_pedido: productoFinal, cantidad: cantidadFinal, urgencia, notas });
 
         if (res.success) {
             setCarrito([]);
@@ -106,13 +99,33 @@ export default function SalonVentas() {
             setCantidad(1);
             setUnidad('unidades');
             setUnidadCustom('');
+            setNotaItem('');
             setUrgencia('normal');
             setNotas('');
             cargarPedidos();
-        } else {
-            alert('Error al enviar: ' + res.error);
         }
         setLoading(false);
+    };
+
+    // BOTONES DE CONTROL DE PEDIDOS HISTÓRICOS
+    const handleRehacerPedido = async (ped: any) => {
+        if (!confirm('¿Querés volver a hacer este mismo pedido?')) return;
+        setLoading(true);
+        await crearPedidoAction({ producto_pedido: ped.producto_pedido, cantidad: ped.cantidad, urgencia: ped.urgencia, notas: ped.notas });
+        await cargarPedidos();
+        setLoading(false);
+    };
+
+    const handleCancelarPedido = async (id: string) => {
+        if (!confirm('¿Seguro que querés cancelar este pedido antes de que lo preparen?')) return;
+        await actualizarEstadoPedidoAction(id, 'rechazado'); // Lo marcamos como rechazado/cancelado
+        cargarPedidos();
+    };
+
+    const handleBorrarHistorial = async (id: string) => {
+        if (!confirm('¿Borrar este pedido del historial?')) return;
+        await eliminarPedidoAction(id);
+        cargarPedidos();
     };
 
     const getEstadoUI = (estado: string) => {
@@ -151,15 +164,11 @@ export default function SalonVentas() {
                         <h2 className="text-xl font-bold text-slate-900 mb-6 border-b border-slate-100 pb-4">Armar Solicitud</h2>
 
                         <div className="space-y-5">
-                            {/* CAJA DE INGRESO RÁPIDO */}
                             <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4">
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">1. Seleccionar Artículo</label>
                                     <input
-                                        list="catalogo"
-                                        type="text"
-                                        value={productoPedido}
-                                        onChange={(e) => setProductoPedido(e.target.value)}
+                                        list="catalogo" type="text" value={productoPedido} onChange={(e) => setProductoPedido(e.target.value)}
                                         placeholder="Ej: Termo Stanley, Rollos de Seda..."
                                         className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium text-sm"
                                     />
@@ -188,18 +197,21 @@ export default function SalonVentas() {
                                             <option value="otro">Otra medida...</option>
                                         </select>
                                     </div>
-
                                     {unidad === 'otro' && (
-                                        <div className="mt-3 animate-in fade-in slide-in-from-top-2">
-                                            <input
-                                                type="text"
-                                                value={unidadCustom}
-                                                onChange={e => setUnidadCustom(e.target.value)}
-                                                placeholder="Ej: Gramos, Paquetes, Pallets..."
-                                                className="w-full p-3 bg-indigo-50 border border-indigo-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm font-bold text-indigo-800 placeholder:text-indigo-400"
-                                            />
+                                        <div className="mt-3">
+                                            <input type="text" value={unidadCustom} onChange={e => setUnidadCustom(e.target.value)} placeholder="Ej: Gramos, Paquetes..." className="w-full p-3 bg-indigo-50 border border-indigo-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm font-bold text-indigo-800 placeholder:text-indigo-400" />
                                         </div>
                                     )}
+                                </div>
+
+                                {/* NUEVO: NOTA POR ÍTEM */}
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">3. Aclaración del artículo (Opcional)</label>
+                                    <input
+                                        type="text" value={notaItem} onChange={e => setNotaItem(e.target.value)}
+                                        placeholder="Ej: Talle L, Color Azul..."
+                                        className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm"
+                                    />
                                 </div>
 
                                 <button onClick={agregarAlCarrito} className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95">
@@ -207,17 +219,19 @@ export default function SalonVentas() {
                                 </button>
                             </div>
 
-                            {/* LISTA CARRITO VISUAL */}
                             {carrito.length > 0 && (
                                 <div className="border border-indigo-100 bg-indigo-50/30 rounded-2xl p-4">
                                     <h3 className="text-xs font-black text-indigo-800 uppercase tracking-widest mb-3 border-b border-indigo-100 pb-2">Lista a pedir ({carrito.length}):</h3>
                                     <ul className="space-y-2">
                                         {carrito.map(item => (
-                                            <li key={item.id} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-indigo-50 shadow-sm text-sm">
-                                                <span className="font-bold text-slate-700">
-                                                    <span className="text-indigo-600 mr-2">{item.cantidad} {item.unidad}</span>
-                                                    {item.producto}
-                                                </span>
+                                            <li key={item.id} className="flex justify-between items-start bg-white p-2.5 rounded-xl border border-indigo-50 shadow-sm text-sm">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-slate-700">
+                                                        <span className="text-indigo-600 mr-2">{item.cantidad} {item.unidad}</span>
+                                                        {item.producto}
+                                                    </span>
+                                                    {item.notaItem && <span className="text-xs text-slate-500 italic mt-0.5">👉 {item.notaItem}</span>}
+                                                </div>
                                                 <button onClick={() => eliminarDelCarrito(item.id)} className="text-slate-400 hover:text-red-500 p-1"><Trash2 size={16} /></button>
                                             </li>
                                         ))}
@@ -226,11 +240,9 @@ export default function SalonVentas() {
                             )}
 
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Nivel de Urgencia del Pedido</label>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Nivel de Urgencia General</label>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <button onClick={() => setUrgencia('normal')} className={`p-3 rounded-xl border-2 font-bold transition-all ${urgencia === 'normal' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-500 hover:border-indigo-200'}`}>
-                                        Normal
-                                    </button>
+                                    <button onClick={() => setUrgencia('normal')} className={`p-3 rounded-xl border-2 font-bold transition-all ${urgencia === 'normal' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-500 hover:border-indigo-200'}`}>Normal</button>
                                     <button onClick={() => setUrgencia('urgente')} className={`p-3 rounded-xl border-2 font-bold flex items-center justify-center gap-2 transition-all ${urgencia === 'urgente' ? 'border-red-500 bg-red-50 text-red-700 shadow-inner' : 'border-slate-200 text-slate-500 hover:border-red-200'}`}>
                                         <Flame size={18} /> Urgente
                                     </button>
@@ -238,7 +250,7 @@ export default function SalonVentas() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Notas adicionales</label>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Nota general para el depósito (Opcional)</label>
                                 <input type="text" value={notas} onChange={e => setNotas(e.target.value)} placeholder="Ej: Cliente esperando en mostrador..." className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm" />
                             </div>
 
@@ -278,12 +290,32 @@ export default function SalonVentas() {
                                                     {new Date(ped.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
+
                                             <h3 className="text-lg font-black text-slate-800 leading-tight flex items-start gap-2">
                                                 <span className={`px-2 py-0.5 rounded-md text-sm mt-0.5 whitespace-nowrap ${isMultiple ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-white'}`}>{ped.cantidad}</span>
-                                                {/* Usamos pre-wrap para que respete los saltos de línea mágicos */}
                                                 <span className="flex-1 whitespace-pre-wrap leading-snug">{ped.producto_pedido}</span>
                                             </h3>
+
                                             {ped.notas && <p className="text-sm font-medium text-slate-500 mt-3 bg-slate-50 p-2.5 rounded-xl border border-slate-100 italic">"{ped.notas}"</p>}
+
+                                            {/* NUEVOS BOTONES DE ACCIÓN PARA EL SALÓN */}
+                                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+                                                {ped.estado === 'pendiente' && (
+                                                    <button onClick={() => handleCancelarPedido(ped.id)} className="text-xs font-bold flex items-center gap-1 text-slate-500 hover:text-red-500 transition-colors">
+                                                        <X size={14} /> Cancelar Pedido
+                                                    </button>
+                                                )}
+                                                {(ped.estado === 'listo' || ped.estado === 'rechazado') && (
+                                                    <>
+                                                        <button onClick={() => handleBorrarHistorial(ped.id)} className="text-xs font-bold flex items-center gap-1 text-slate-400 hover:text-red-500 transition-colors mr-auto">
+                                                            <Trash2 size={14} /> Borrar del historial
+                                                        </button>
+                                                        <button onClick={() => handleRehacerPedido(ped)} className="text-xs font-bold flex items-center gap-1 text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors">
+                                                            <RotateCcw size={14} /> Pedir lo mismo
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
                                     )
                                 })

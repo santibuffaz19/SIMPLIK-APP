@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Package, Clock, Play, Check, X, Flame, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Package, Clock, Play, Check, X, Flame, RefreshCw, RotateCcw } from 'lucide-react';
 import { obtenerPedidosActivosAction, actualizarEstadoPedidoAction } from '../actions';
 
 export default function DepositoVentas() {
@@ -58,11 +58,9 @@ export default function DepositoVentas() {
                 </div>
 
                 <h3 className="text-lg font-black text-slate-800 leading-tight mb-3 flex items-start gap-2">
-                    {/* Badge dinámico para pedido múltiple o simple */}
                     <span className={`px-2 py-0.5 rounded-md text-sm mt-0.5 whitespace-nowrap ${isMultiple ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-white'}`}>
                         {ped.cantidad}
                     </span>
-                    {/* MAGIA ACÁ: whitespace-pre-wrap respeta los saltos de línea para crear la lista */}
                     <span className="flex-1 whitespace-pre-wrap leading-snug">{ped.producto_pedido}</span>
                 </h3>
 
@@ -74,7 +72,7 @@ export default function DepositoVentas() {
                             <Play size={14} /> Preparar
                         </button>
                         <button onClick={() => cambiarEstado(ped.id, 'rechazado')} className="bg-red-50 text-red-700 hover:bg-red-600 hover:text-white px-3 py-2 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors">
-                            <X size={14} /> Sin Stock
+                            <X size={14} /> Faltante
                         </button>
                     </div>
                 )}
@@ -95,11 +93,15 @@ export default function DepositoVentas() {
                     </div>
                 )}
 
+                {/* NUEVO: Botón Reactivar en Completados */}
                 {columna === 'completados' && (
-                    <div className="mt-2 text-right">
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
                         <span className={`text-[10px] font-black uppercase ${ped.estado === 'listo' ? 'text-emerald-500' : 'text-red-500'}`}>
                             {ped.estado === 'listo' ? '✔ Entregado' : '✖ Cancelado'}
                         </span>
+                        <button onClick={() => cambiarEstado(ped.id, 'pendiente')} className="text-xs font-bold text-slate-400 hover:text-indigo-600 flex items-center gap-1 transition-colors">
+                            <RotateCcw size={14} /> Reactivar
+                        </button>
                     </div>
                 )}
             </div>
@@ -155,7 +157,7 @@ export default function DepositoVentas() {
                 <div className="bg-slate-100/50 rounded-[2rem] p-5 border-2 border-slate-200 flex flex-col opacity-70 hover:opacity-100 transition-opacity">
                     <div className="flex items-center justify-between mb-5 px-2">
                         <h2 className="text-lg font-black text-slate-700 uppercase flex items-center gap-2">
-                            <Check size={20} className="text-emerald-500" /> Historial Reciente
+                            <Check size={20} className="text-emerald-500" /> Historial
                         </h2>
                     </div>
                     <div className="space-y-4 flex-1 overflow-y-auto hide-scrollbar pb-10">

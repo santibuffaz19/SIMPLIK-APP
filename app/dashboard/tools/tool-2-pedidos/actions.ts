@@ -3,7 +3,7 @@
 import { supabase } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
 
-// 1. Crear un nuevo pedido (Lo usa el Salón)
+// 1. Crear un nuevo pedido
 export async function crearPedidoAction(pedido: { producto_pedido: string; cantidad: string; urgencia: string; notas?: string }) {
     try {
         const { data, error } = await supabase
@@ -20,15 +20,14 @@ export async function crearPedidoAction(pedido: { producto_pedido: string; canti
     }
 }
 
-// 2. Leer los pedidos activos (Lo usa el Depósito y el Salón)
+// 2. Leer los pedidos activos
 export async function obtenerPedidosActivosAction() {
     try {
-        // Traemos todo menos lo que ya se entregó o rechazó hace mucho (para no saturar la pantalla)
         const { data, error } = await supabase
             .from('tool_pedidos')
             .select('*')
             .order('created_at', { ascending: false })
-            .limit(50); // Solo los últimos 50 pedidos para mantener la pantalla rápida
+            .limit(50);
 
         if (error) throw new Error(error.message);
         return { success: true, data };
@@ -37,12 +36,29 @@ export async function obtenerPedidosActivosAction() {
     }
 }
 
-// 3. Cambiar el estado de un pedido (Lo usa el Depósito)
+// 3. Cambiar el estado de un pedido
 export async function actualizarEstadoPedidoAction(id: string, nuevoEstado: string) {
     try {
         const { error } = await supabase
             .from('tool_pedidos')
             .update({ estado: nuevoEstado })
+            .eq('id', id);
+
+        if (error) throw new Error(error.message);
+
+        revalidatePath('/dashboard/tools/tool-2-pedidos');
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+// 4. NUEVO: Eliminar un pedido (Para limpiar el historial del Salón)
+export async function eliminarPedidoAction(id: string) {
+    try {
+        const { error } = await supabase
+            .from('tool_pedidos')
+            .delete()
             .eq('id', id);
 
         if (error) throw new Error(error.message);
