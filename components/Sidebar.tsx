@@ -15,7 +15,6 @@ export default function Sidebar() {
 
     return (
         <>
-            {/* BOTÓN HAMBURGUESA (Solo visible en celular) */}
             <button
                 onClick={() => setIsOpen(true)}
                 className="md:hidden fixed top-5 left-4 z-50 p-2 bg-slate-900 text-white rounded-xl shadow-lg active:scale-95 transition-transform"
@@ -23,7 +22,6 @@ export default function Sidebar() {
                 <Menu size={24} />
             </button>
 
-            {/* FONDO OSCURO AL ABRIR EL MENÚ MÓVIL */}
             {isOpen && (
                 <div
                     className="md:hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40"
@@ -31,16 +29,16 @@ export default function Sidebar() {
                 />
             )}
 
-            {/* SIDEBAR (Oculto a la izquierda en celu, normal en compu) */}
-            <div className={`fixed inset-y-0 left-0 z-50 w-64 min-h-screen bg-slate-900 text-slate-300 flex flex-col font-sans shrink-0 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
-                <div className="h-20 flex items-center justify-between px-8 border-b border-slate-800">
+            {/* CORRECCIÓN: h-[100dvh] en vez de min-h-screen */}
+            <div className={`fixed inset-y-0 left-0 z-50 w-64 h-[100dvh] bg-slate-900 text-slate-300 flex flex-col font-sans shrink-0 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
+                <div className="h-20 flex items-center justify-between px-8 border-b border-slate-800 shrink-0">
                     <h1 className="text-2xl font-bold text-white tracking-tight">Simplik<span className="text-indigo-500">.</span></h1>
                     <button onClick={() => setIsOpen(false)} className="md:hidden text-slate-400 hover:text-white">
                         <X size={24} />
                     </button>
                 </div>
 
-                <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+                <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto hide-scrollbar">
                     <p className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Principal</p>
 
                     <Link href="/dashboard" onClick={() => setIsOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
@@ -70,7 +68,7 @@ export default function Sidebar() {
                     </div>
                 </nav>
 
-                <div className="p-4 border-t border-slate-800 space-y-2">
+                <div className="p-4 border-t border-slate-800 space-y-2 shrink-0">
                     <Link href={`/dashboard/configuracion?from=${pathname}`} onClick={() => setIsOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
                         <Settings size={20} />
                         <span className="font-medium">Configuración</span>

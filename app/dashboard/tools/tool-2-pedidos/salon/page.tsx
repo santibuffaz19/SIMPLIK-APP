@@ -27,9 +27,7 @@ export default function SalonVentas() {
     const [notas, setNotas] = useState('');
     const [respuestas, setRespuestas] = useState<Record<string, string>>({});
 
-    // ESTADOS DEL ESCÁNER QR
     const [showScanner, setShowScanner] = useState(false);
-    const scannerRef = useRef<any>(null);
 
     useEffect(() => {
         async function fetchInitData() {
@@ -50,31 +48,31 @@ export default function SalonVentas() {
         return () => clearInterval(radar);
     }, []);
 
-    // MOTOR DEL ESCÁNER QR
+    // MOTOR DEL ESCÁNER QR - CORRECCIÓN: Usa Html5Qrcode directo para auto-pedir permisos
     useEffect(() => {
+        let html5QrCode: any;
         if (showScanner) {
-            import('html5-qrcode').then(({ Html5QrcodeScanner }) => {
-                if (!scannerRef.current) {
-                    scannerRef.current = new Html5QrcodeScanner('qr-reader', { fps: 10, qrbox: { width: 250, height: 250 } }, false);
-                    scannerRef.current.render(
-                        (decodedText: string) => {
-                            setProductoPedido(decodedText);
-                            setShowScanner(false);
-                        },
-                        (err: any) => { /* ignora errores de frame */ }
-                    );
-                }
+            import('html5-qrcode').then(({ Html5Qrcode }) => {
+                html5QrCode = new Html5Qrcode("qr-reader");
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    (decodedText: string) => {
+                        setProductoPedido(decodedText);
+                        setShowScanner(false);
+                        html5QrCode.stop().catch(console.error);
+                    },
+                    (errorMessage: string) => { /* ignora frames vacíos */ }
+                ).catch((err: any) => {
+                    console.error(err);
+                    alert("Asegurate de darle permisos de cámara al navegador.");
+                    setShowScanner(false);
+                });
             });
-        } else {
-            if (scannerRef.current) {
-                scannerRef.current.clear().catch(console.error);
-                scannerRef.current = null;
-            }
         }
         return () => {
-            if (scannerRef.current) {
-                scannerRef.current.clear().catch(console.error);
-                scannerRef.current = null;
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().catch(console.error);
             }
         };
     }, [showScanner]);
@@ -90,7 +88,6 @@ export default function SalonVentas() {
         if (!productoPedido.trim()) return alert('Escribí un producto antes de agregarlo.');
         let unitToSave = unidad === 'otro' ? unidadCustom.trim() : unidad;
         if (unidad === 'otro' && !unitToSave) return alert('Especificá la unidad de medida.');
-
         setCarrito([...carrito, { id: Date.now(), producto: productoPedido, cantidad, unidad: unitToSave, notaItem: notaItem.trim() }]);
         setProductoPedido(''); setCantidad(1); setUnidadCustom(''); setNotaItem('');
     };
@@ -116,7 +113,6 @@ export default function SalonVentas() {
         }
 
         const res = await crearPedidoAction({ producto_pedido: productoFinal, cantidad: cantidadFinal, urgencia, notas });
-
         if (res.success) {
             setCarrito([]); setProductoPedido(''); setCantidad(1); setUnidadCustom(''); setNotaItem(''); setUrgencia('normal'); setNotas('');
             cargarPedidos();
@@ -174,7 +170,6 @@ export default function SalonVentas() {
 
     return (
         <div className="max-w-6xl mx-auto p-4 md:p-8 font-sans text-slate-800">
-            {/* MODAL DE LA CÁMARA */}
             {showScanner && (
                 <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white p-6 rounded-[2rem] w-full max-w-sm relative shadow-2xl">
@@ -184,14 +179,13 @@ export default function SalonVentas() {
                         <h3 className="font-black text-xl text-center mb-6 text-slate-800 flex items-center justify-center gap-2">
                             <Camera size={24} className="text-indigo-600" /> Escanear Código
                         </h3>
-                        <div id="qr-reader" className="w-full rounded-2xl overflow-hidden border-2 border-indigo-100"></div>
+                        <div id="qr-reader" className="w-full rounded-2xl overflow-hidden bg-black aspect-square flex items-center justify-center"></div>
                         <p className="text-center text-xs font-bold text-slate-400 mt-4">Enfocá el código QR del producto.</p>
                     </div>
                 </div>
             )}
 
-            {/* ml-12 evita que se pise con el botón hamburguesa en celular */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 ml-12 md:ml-0 gap-4">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 mt-12 md:mt-0 ml-2 md:ml-0 gap-4">
                 <div className="flex items-center gap-3 md:gap-4">
                     <Link href="/dashboard/tools/tool-2-pedidos" className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-500 transition-all shadow-sm hidden md:flex">
                         <ArrowLeft size={20} />
@@ -218,8 +212,8 @@ export default function SalonVentas() {
                                 <div>
                                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">1. Seleccionar Artículo</label>
                                     <div className="flex gap-2">
-                                        <input list="catalogo" type="text" value={productoPedido} onChange={(e) => setProductoPedido(e.target.value)} placeholder="Ej: Termo, Tela..." className="flex-1 p-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium text-sm" />
-                                        <button onClick={() => setShowScanner(true)} className="bg-indigo-100 text-indigo-700 p-3 rounded-xl hover:bg-indigo-200 transition-colors border border-indigo-200 shadow-sm active:scale-95 flex items-center justify-center">
+                                        <input list="catalogo" type="text" value={productoPedido} onChange={(e) => setProductoPedido(e.target.value)} placeholder="Ej: Termo, Tela..." className="flex-1 p-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium text-sm w-full" />
+                                        <button onClick={() => setShowScanner(true)} className="bg-indigo-100 text-indigo-700 p-3 rounded-xl hover:bg-indigo-200 transition-colors border border-indigo-200 shadow-sm active:scale-95 flex items-center justify-center shrink-0">
                                             <Camera size={20} />
                                         </button>
                                     </div>
@@ -275,7 +269,7 @@ export default function SalonVentas() {
                                                     </span>
                                                     {item.notaItem && <span className="text-[11px] text-slate-500 italic mt-1 bg-slate-50 p-1 rounded">👉 {item.notaItem}</span>}
                                                 </div>
-                                                <button onClick={() => eliminarDelCarrito(item.id)} className="text-slate-400 hover:text-red-500 p-1.5 bg-slate-50 rounded-lg hover:bg-red-50 transition-colors"><Trash2 size={16} /></button>
+                                                <button onClick={() => eliminarDelCarrito(item.id)} className="text-slate-400 hover:text-red-500 p-1.5 bg-slate-50 rounded-lg hover:bg-red-50 transition-colors shrink-0"><Trash2 size={16} /></button>
                                             </li>
                                         ))}
                                     </ul>
@@ -329,7 +323,7 @@ export default function SalonVentas() {
                                                     </span>
                                                     {ped.urgencia === 'urgente' && <span className="bg-red-500 text-white px-1.5 py-1 rounded text-[9px] font-black uppercase flex items-center gap-1"><Flame size={10} /> Urg</span>}
                                                 </div>
-                                                <span className="text-[11px] font-bold text-slate-400">
+                                                <span className="text-[11px] font-bold text-slate-400 shrink-0">
                                                     {new Date(ped.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
@@ -366,17 +360,18 @@ export default function SalonVentas() {
                                                         </div>
                                                     )}
                                                     {isPausado && (
+                                                        /* CORRECCIÓN: Botones no aplastados */
                                                         <div className="flex flex-col sm:flex-row gap-2 mt-2 pt-2 border-t border-amber-100">
                                                             <input
                                                                 type="text"
                                                                 value={respuestas[ped.id] || ''}
                                                                 onChange={e => setRespuestas({ ...respuestas, [ped.id]: e.target.value })}
                                                                 placeholder="Escribí tu respuesta..."
-                                                                className="flex-1 p-2.5 text-xs bg-amber-50 border border-amber-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500/20"
+                                                                className="flex-1 p-2.5 text-xs bg-amber-50 border border-amber-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500/20 w-full"
                                                             />
                                                             <button
                                                                 onClick={() => enviarRespuesta(ped.id)}
-                                                                className="bg-amber-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-600 flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                                                                className="bg-amber-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-600 flex items-center justify-center gap-1.5 transition-colors shadow-sm shrink-0"
                                                             >
                                                                 Responder <Send size={14} />
                                                             </button>
@@ -385,7 +380,7 @@ export default function SalonVentas() {
                                                 </div>
                                             )}
 
-                                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2 flex-wrap">
                                                 {ped.estado === 'pendiente' && (
                                                     <button onClick={() => handleCancelarPedido(ped.id)} className="text-xs font-bold flex items-center gap-1.5 text-slate-400 hover:text-red-500 transition-colors bg-slate-50 px-3 py-1.5 rounded-lg"><X size={14} /> Cancelar</button>
                                                 )}

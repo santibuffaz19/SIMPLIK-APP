@@ -127,7 +127,7 @@ export default function DepositoVentas() {
                             if (!line.trim()) return null;
                             const isNote = line.includes('👉');
                             return (
-                                <div key={i} className={`${isNote ? 'text-[11px] font-medium text-slate-500 italic mt-0.5 mb-1 bg-slate-50 px-1 rounded' : 'text-sm font-bold text-slate-800 leading-snug mt-0.5'}`}>
+                                <div key={i} className={`${isNote ? 'text-[11px] font-medium text-slate-500 italic mt-0.5 mb-1 bg-slate-50 px-1 rounded w-fit' : 'text-sm font-bold text-slate-800 leading-snug mt-0.5'}`}>
                                     {line}
                                 </div>
                             );
@@ -182,10 +182,13 @@ export default function DepositoVentas() {
                                                 ))}
                                             </div>
                                         )}
-                                        <div className="flex gap-2">
-                                            <input type="text" value={mensajeProblema} onChange={e => setMensajeProblema(e.target.value)} placeholder="O escribí una nota..." className="flex-1 px-3 py-2 text-xs border border-amber-200 rounded-lg outline-none focus:ring-2 focus:ring-amber-500/20" autoFocus />
-                                            <button onClick={() => enviarProblema(ped.id)} className="bg-amber-500 text-white p-2 rounded-lg hover:bg-amber-600 shadow-sm"><Send size={16} /></button>
-                                            <button onClick={() => setInputProblemaId(null)} className="bg-white text-slate-500 p-2 rounded-lg border border-slate-200 hover:bg-slate-100 shadow-sm"><X size={16} /></button>
+                                        {/* CORRECCIÓN: Botones de enviar no aplastados */}
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                            <input type="text" value={mensajeProblema} onChange={e => setMensajeProblema(e.target.value)} placeholder="O escribí una nota..." className="flex-1 px-3 py-2 text-xs border border-amber-200 rounded-lg outline-none focus:ring-2 focus:ring-amber-500/20 w-full" autoFocus />
+                                            <div className="flex gap-2 w-full sm:w-auto">
+                                                <button onClick={() => enviarProblema(ped.id)} className="flex-1 sm:flex-none bg-amber-500 text-white px-4 py-2 rounded-lg hover:bg-amber-600 shadow-sm flex justify-center"><Send size={16} /></button>
+                                                <button onClick={() => setInputProblemaId(null)} className="flex-1 sm:flex-none bg-white text-slate-500 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-100 shadow-sm flex justify-center"><X size={16} /></button>
+                                            </div>
                                         </div>
                                     </div>
                                 ) : (
@@ -224,7 +227,7 @@ export default function DepositoVentas() {
 
     return (
         <div className="max-w-7xl mx-auto p-4 md:p-8 font-sans text-slate-800 min-h-screen flex flex-col">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 ml-12 md:ml-0 gap-4">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 mt-12 md:mt-0 ml-2 md:ml-0 gap-4">
                 <div className="flex items-center gap-3 md:gap-4">
                     <Link href="/dashboard/tools/tool-2-pedidos" className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-500 transition-all shadow-sm hidden md:flex"><ArrowLeft size={20} /></Link>
                     <div><h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2"><Package className="text-emerald-600" size={28} /> Depósito</h1></div>
@@ -233,7 +236,6 @@ export default function DepositoVentas() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
-                {/* En celular h-[450px] para no tener que scrollear infinito */}
                 <div className="bg-slate-100/60 rounded-[1.5rem] p-4 border border-slate-200 flex flex-col h-[450px] lg:h-auto">
                     <div className="flex items-center justify-between mb-4 px-1">
                         <h2 className="text-base font-black text-slate-700 uppercase flex items-center gap-2"><Clock size={18} className="text-orange-500" /> Nuevos</h2>
