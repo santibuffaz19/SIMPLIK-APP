@@ -33,16 +33,29 @@ export default function PaginaEtiquetaFinal() {
     const hasContent = showName || showPrice || showSku || logoBase64 || showPromo || extraNote;
 
     useEffect(() => {
-        async function fetchProduct() {
-            const { data } = await supabase.from('products').select('*').eq('id', id).single();
-            if (data) {
-                setProduct(data);
-                const b64 = await QRCode.toDataURL(`${window.location.origin}/p/${data.id}`, { margin: 1 });
+        async function fetchData() {
+            // 1. Buscamos el producto y generamos su QR
+            const { data: prodData } = await supabase.from('products').select('*').eq('id', id).single();
+            if (prodData) {
+                setProduct(prodData);
+                const b64 = await QRCode.toDataURL(`${window.location.origin}/p/${prodData.id}`, { margin: 1 });
                 setQrBase64(b64);
             }
+
+            // 2. Buscamos tus ajustes predeterminados de la Tool 1
+            const { data: settingsData } = await supabase.from('tool_qr_settings').select('*').eq('id', 1).single();
+            if (settingsData) {
+                // Aplicamos las medidas y el layout que configuraste en tu panel
+                setWidth(settingsData.default_width_mm || 50);
+                setHeight(settingsData.default_height_mm || 25);
+                setDebouncedWidth(settingsData.default_width_mm || 50);
+                setDebouncedHeight(settingsData.default_height_mm || 25);
+                setLayout(settingsData.default_layout || 'qr-right');
+            }
+
             setLoading(false);
         }
-        fetchProduct();
+        fetchData();
     }, [id]);
 
     useEffect(() => {
