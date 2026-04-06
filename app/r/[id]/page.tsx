@@ -126,8 +126,7 @@ export default function RevistaPublica() {
             while (target && target !== document.body) {
                 if (target.classList && target.classList.contains('paper')) {
                     paperElement = target;
-                    paperIndex = papers.indexOf(paperElement);
-                    break;
+                    paperIndex = papers.indexOf(paperElement as HTMLElement);
                 }
                 if (target.tagName.toLowerCase() === 'button' || target.tagName.toLowerCase() === 'span') return;
                 target = target.parentNode;
