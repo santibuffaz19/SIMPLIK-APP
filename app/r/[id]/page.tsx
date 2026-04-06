@@ -304,7 +304,7 @@ export default function RevistaPublica() {
     return (
         <div className="h-[100dvh] w-full bg-slate-300 flex items-center justify-center overflow-hidden select-none" style={{ fontFamily: font }}>
             {/* ESTILOS INYECTADOS GLOBALES PARA LA REVISTA */}
-            <style dangerouslySetContent={{
+            <style dangerouslySetInnerHTML={{
                 __html: `
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Space+Grotesk:wght@400;700&display=swap');
                 
