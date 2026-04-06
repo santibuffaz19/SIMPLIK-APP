@@ -40,3 +40,29 @@ export async function eliminarCatalogoAction(id: string) {
         return { success: true };
     } catch (error: any) { return { success: false, error: error.message }; }
 }
+
+// 5. Obtener configuración de Tool 3
+export async function obtenerConfiguracionCatalogosAction() {
+    try {
+        const { data, error } = await supabase.from('tool_catalogs_settings').select('*').eq('id', 1).single();
+        if (error && error.code !== 'PGRST116') throw new Error(error.message);
+        return { success: true, data };
+    } catch (error: any) { return { success: false, error: error.message }; }
+}
+
+export async function guardarConfiguracionCatalogosAction(config: any) {
+    try {
+        const { error } = await supabase.from('tool_catalogs_settings').upsert({ id: 1, ...config }, { onConflict: 'id' });
+        if (error) throw new Error(error.message);
+        return { success: true };
+    } catch (error: any) { return { success: false, error: error.message }; }
+}
+
+// 6. Obtener productos de la Base de Datos (Tool 1) para inyectarlos en la revista
+export async function obtenerProductosParaCatalogoAction() {
+    try {
+        const { data, error } = await supabase.from('products').select('id, name, sku, price_installments, image_urls, variants_config');
+        if (error) throw new Error(error.message);
+        return { success: true, data };
+    } catch (error: any) { return { success: false, error: error.message }; }
+}
