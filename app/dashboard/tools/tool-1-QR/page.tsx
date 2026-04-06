@@ -6,10 +6,13 @@ import DeleteButton from './components/DeleteButton';
 export const dynamic = 'force-dynamic';
 
 export default async function ListaProductos() {
+    // 🚀 OPTIMIZACIÓN: Solo traemos las columnas que realmente se dibujan en la tabla.
+    // Ignoramos descripciones largas, JSONs de especificaciones e imágenes pesadas.
     const { data: productosReales, error } = await supabase
         .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('id, name, category, sku, price_installments, variants_config')
+        .order('created_at', { ascending: false })
+        .limit(300); // Límite sano para no colgar la UI. Si pasás de 300, hay que implementar paginación real.
 
     if (error) console.error('Error cargando productos:', error.message);
 
