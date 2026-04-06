@@ -151,13 +151,13 @@ export default function NuevoProductoUniversal() {
                         <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2"><Info size={20} className="text-indigo-500" /> Ficha Técnica (Datos Fijos)</h2>
                         <div className="space-y-3">
                             {atributos.map((atributo) => (
-                                /* CORRECCIÓN: items-center en celular para el tacho de basura */
-                                <div key={atributo.id} className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 bg-slate-50 p-2 rounded-xl sm:bg-transparent sm:p-0">
-                                    <input type="text" placeholder="Ej: Marca" value={atributo.clave} onChange={(e) => actualizarAtributo(atributo.id, 'clave', e.target.value)} className="w-full sm:w-1/3 px-3 py-2 bg-white sm:bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500" />
-                                    <div className="flex w-full sm:flex-1 gap-2 items-center">
-                                        <input type="text" placeholder="Valor..." value={atributo.valor} onChange={(e) => actualizarAtributo(atributo.id, 'valor', e.target.value)} className="flex-1 px-3 py-2 bg-white sm:bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500" />
-                                        <button onClick={() => eliminarAtributo(atributo.id)} className="p-2 bg-white sm:bg-transparent border border-slate-200 sm:border-none rounded-lg text-slate-400 hover:text-red-500 shrink-0 h-[38px] flex items-center justify-center"><Trash2 size={18} /></button>
+                                /* CORRECCIÓN: Mismo formato en bloque que Variantes */
+                                <div key={atributo.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 sm:border-none sm:bg-transparent sm:p-0 group">
+                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 w-full">
+                                        <input type="text" placeholder="Ej: Marca" value={atributo.clave} onChange={(e) => actualizarAtributo(atributo.id, 'clave', e.target.value)} className="w-full px-3 py-2 bg-white sm:bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500" />
+                                        <input type="text" placeholder="Valor..." value={atributo.valor} onChange={(e) => actualizarAtributo(atributo.id, 'valor', e.target.value)} className="w-full px-3 py-2 bg-white sm:bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500" />
                                     </div>
+                                    <button onClick={() => eliminarAtributo(atributo.id)} className="w-full sm:w-auto p-2 bg-white sm:bg-transparent border border-slate-200 sm:border-none rounded-lg text-slate-400 hover:text-red-500 mt-1 sm:mt-0 shrink-0 flex justify-center"><Trash2 size={18} /></button>
                                 </div>
                             ))}
                             <button onClick={agregarAtributo} className="text-sm font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1 mt-3"><Plus size={16} /> Sumar otro dato</button>

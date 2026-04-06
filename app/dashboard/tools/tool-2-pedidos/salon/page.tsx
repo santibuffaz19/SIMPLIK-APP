@@ -48,7 +48,6 @@ export default function SalonVentas() {
         return () => clearInterval(radar);
     }, []);
 
-    // MOTOR DEL ESCÁNER QR - INTERCEPTOR DE ENLACES
     useEffect(() => {
         let html5QrCode: any;
         if (showScanner) {
@@ -58,24 +57,22 @@ export default function SalonVentas() {
                     { facingMode: "environment" },
                     { fps: 10, qrbox: { width: 250, height: 250 } },
                     async (decodedText: string) => {
-                        // DETENEMOS EL ESCÁNER
                         html5QrCode.stop().catch(console.error);
                         setShowScanner(false);
 
-                        // ¿ES UN LINK DE TU APP? (Ej: https://simplik.../p/12345)
                         if (decodedText.includes('/p/')) {
                             const partes = decodedText.split('/p/');
-                            const idProducto = partes[1]; // Sacamos el ID
+                            const idProducto = partes[1];
 
-                            // BUSCAMOS EL NOMBRE REAL EN SUPABASE
-                            const { data } = await supabase.from('products').select('name').eq('id', idProducto).single();
+                            // CORRECCIÓN: Ahora trae name Y sku, y los formatea igual que la lista
+                            const { data } = await supabase.from('products').select('name, sku').eq('id', idProducto).single();
                             if (data && data.name) {
-                                setProductoPedido(data.name);
+                                const displayName = data.sku ? `${data.sku} - ${data.name}` : data.name;
+                                setProductoPedido(displayName);
                             } else {
-                                setProductoPedido(decodedText); // Por las dudas si falla, dejamos el link
+                                setProductoPedido(decodedText);
                             }
                         } else {
-                            // SI NO ES UN LINK (Ej: es un código de barras común)
                             setProductoPedido(decodedText);
                         }
                     },
@@ -386,11 +383,11 @@ export default function SalonVentas() {
                                                                 value={respuestas[ped.id] || ''}
                                                                 onChange={e => setRespuestas({ ...respuestas, [ped.id]: e.target.value })}
                                                                 placeholder="Escribí tu respuesta..."
-                                                                className="flex-1 p-2.5 text-xs bg-amber-50 border border-amber-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500/20"
+                                                                className="flex-1 p-2.5 text-xs bg-amber-50 border border-amber-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500/20 w-full"
                                                             />
                                                             <button
                                                                 onClick={() => enviarRespuesta(ped.id)}
-                                                                className="bg-amber-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-600 flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                                                                className="bg-amber-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-600 flex items-center justify-center gap-1.5 transition-colors shadow-sm shrink-0"
                                                             >
                                                                 Responder <Send size={14} />
                                                             </button>

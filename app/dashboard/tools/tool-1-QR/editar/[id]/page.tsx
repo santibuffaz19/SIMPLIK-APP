@@ -128,12 +128,12 @@ export default function EditarProductoUniversal() {
                         <div className="space-y-3">
                             {atributos.map((at: any) => (
                                 /* CORRECCIÓN: items-center en celular */
-                                <div key={at.id} className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 bg-slate-50 p-2 rounded-xl sm:bg-transparent sm:p-0">
-                                    <input placeholder="Ej: Marca" value={at.clave} onChange={e => actualizarAtributo(at.id, 'clave', e.target.value)} className="w-full sm:w-1/3 p-2.5 sm:p-2 bg-white sm:bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm" />
-                                    <div className="flex w-full sm:flex-1 gap-2 items-center">
-                                        <input placeholder="Ej: Stanley" value={at.valor} onChange={e => actualizarAtributo(at.id, 'valor', e.target.value)} className="flex-1 p-2.5 sm:p-2 bg-white sm:bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm" />
-                                        <button onClick={() => setAtributos(atributos.filter(a => a.id !== at.id))} className="text-slate-400 hover:text-red-500 p-2 bg-white sm:bg-transparent border border-slate-200 sm:border-none rounded-lg shrink-0 h-[38px] flex items-center justify-center"><Trash2 size={18} /></button>
+                                <div key={at.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 sm:border-none sm:bg-transparent sm:p-0 group">
+                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 w-full">
+                                        <input placeholder="Ej: Marca" value={at.clave} onChange={e => actualizarAtributo(at.id, 'clave', e.target.value)} className="w-full px-3 py-2 bg-white sm:bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:border-indigo-500" />
+                                        <input placeholder="Ej: Stanley" value={at.valor} onChange={e => actualizarAtributo(at.id, 'valor', e.target.value)} className="w-full px-3 py-2 bg-white sm:bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:border-indigo-500" />
                                     </div>
+                                    <button onClick={() => setAtributos(atributos.filter(a => a.id !== at.id))} className="w-full sm:w-auto p-2 bg-white sm:bg-transparent border border-slate-200 sm:border-none rounded-lg text-slate-400 hover:text-red-500 mt-1 sm:mt-0 shrink-0 flex justify-center"><Trash2 size={18} /></button>
                                 </div>
                             ))}
                             <button onClick={agregarAtributo} className="text-indigo-600 font-bold text-sm flex items-center gap-1 mt-3 hover:text-indigo-700"><Plus size={16} /> Agregar Atributo</button>
