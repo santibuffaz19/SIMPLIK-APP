@@ -107,3 +107,39 @@ export async function responderProblemaAction(id: string, respuesta: string) {
         return { success: false, error: error.message };
     }
 }
+
+// ------------------------------------------------------------------
+// NUEVAS FUNCIONES PARA CONFIGURACIÓN GLOBAL (TOOL 2)
+// ------------------------------------------------------------------
+
+// 7. Obtener configuración de la Tool 2
+export async function obtenerConfiguracionPedidosAction() {
+    try {
+        const { data, error } = await supabase
+            .from('tool_pedidos_settings')
+            .select('*')
+            .eq('id', 1)
+            .single();
+
+        if (error && error.code !== 'PGRST116') throw new Error(error.message);
+        return { success: true, data };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+// 8. Guardar configuración de la Tool 2
+export async function guardarConfiguracionPedidosAction(config: any) {
+    try {
+        const { error } = await supabase
+            .from('tool_pedidos_settings')
+            .upsert({ id: 1, ...config }, { onConflict: 'id' });
+
+        if (error) throw new Error(error.message);
+
+        revalidatePath('/dashboard/tools/tool-2-pedidos/configuracion');
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}

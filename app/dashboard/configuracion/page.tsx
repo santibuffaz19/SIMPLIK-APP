@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Building2, QrCode, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Building2, QrCode, ArrowRight, ArrowLeft, Package } from 'lucide-react';
 import { Suspense } from 'react';
 
 function ConfiguracionContent() {
@@ -66,6 +66,20 @@ function ConfiguracionContent() {
                         Ajustes de las etiquetas PDF, medidas por defecto y preferencias del motor QR.
                     </p>
                     <div className="mt-auto flex items-center gap-2 text-emerald-600 font-black text-sm uppercase tracking-widest">
+                        Configurar <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                    </div>
+                </Link>
+
+                {/* TOOL 2 CONFIG (NUEVA) */}
+                <Link href="/dashboard/tools/tool-2-pedidos/configuracion" className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all group flex flex-col h-full">
+                    <div className="bg-orange-50 w-14 h-14 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <Package size={28} className="text-orange-600" />
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-900 mb-2">Comandas Internas</h2>
+                    <p className="text-sm text-slate-500 mb-6 flex-1">
+                        Unidades de medida, respuestas rápidas, alertas sonoras y limpieza del historial.
+                    </p>
+                    <div className="mt-auto flex items-center gap-2 text-orange-600 font-black text-sm uppercase tracking-widest">
                         Configurar <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                     </div>
                 </Link>
