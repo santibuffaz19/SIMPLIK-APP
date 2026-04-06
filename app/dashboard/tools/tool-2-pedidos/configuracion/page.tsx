@@ -84,6 +84,7 @@ export default function ConfiguracionToolPedidos() {
             )}
 
             <div className="space-y-8">
+                {/* UNIDADES DE MEDIDA */}
                 <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                     <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
                         <Ruler className="text-indigo-500" size={24} /> Unidades de Medida
@@ -95,6 +96,7 @@ export default function ConfiguracionToolPedidos() {
                     </div>
                 </section>
 
+                {/* RESPUESTAS RÁPIDAS */}
                 <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                     <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
                         <MessageSquare className="text-amber-500" size={24} /> Respuestas Rápidas (Depósito)
@@ -107,6 +109,7 @@ export default function ConfiguracionToolPedidos() {
                 </section>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* ALERTAS SONORAS */}
                     <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                         <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
                             <Bell className="text-red-500" size={24} /> Alertas
@@ -120,6 +123,7 @@ export default function ConfiguracionToolPedidos() {
                         </label>
                     </section>
 
+                    {/* LIMPIEZA / TTL */}
                     <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                         <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
                             <Timer className="text-emerald-500" size={24} /> Historial
@@ -135,7 +139,17 @@ export default function ConfiguracionToolPedidos() {
 
                             {autoLimpiezaActiva && (
                                 <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 animate-in fade-in">
-                                    <input type="number" value={autoLimpiezaHoras} onChange={(e) => setAutoLimpiezaHoras(Number(e.target.value))} className="w-20 p-2 bg-white border border-slate-200 rounded-lg text-center font-black outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                                    {/* BLINDAJE: min="1" y validación onChange para que no baje de 1 */}
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={autoLimpiezaHoras}
+                                        onChange={(e) => {
+                                            const val = parseInt(e.target.value);
+                                            setAutoLimpiezaHoras(isNaN(val) || val < 1 ? 1 : val);
+                                        }}
+                                        className="w-20 p-2 bg-white border border-slate-200 rounded-lg text-center font-black outline-none focus:ring-2 focus:ring-emerald-500/20"
+                                    />
                                     <span className="font-bold text-sm text-slate-600">Horas límite</span>
                                 </div>
                             )}
