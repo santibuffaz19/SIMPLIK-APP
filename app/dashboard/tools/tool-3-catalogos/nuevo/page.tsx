@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Plus, Trash2, BookOpen, Link as LinkIcon, Loader2, Database, Layout, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, BookOpen, Link as LinkIcon, Loader2, Database, Layout, Image as ImageIcon, X } from 'lucide-react';
 import { guardarCatalogoAction, obtenerProductosParaCatalogoAction } from '../actions';
 
 export default function CrearRevista() {
