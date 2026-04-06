@@ -1,20 +1,48 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Search, QrCode, Box, Pencil, FileSpreadsheet } from 'lucide-react';
+import { Plus, Search, QrCode, Box, Pencil, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import DeleteButton from './components/DeleteButton';
 
-export const dynamic = 'force-dynamic';
+export default function ListaProductos() {
+    // Estados para guardar los productos, si está cargando, y lo que el usuario tipea
+    const [productos, setProductos] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [busqueda, setBusqueda] = useState('');
 
-export default async function ListaProductos() {
-    // 🚀 OPTIMIZACIÓN: Solo traemos las columnas que realmente se dibujan en la tabla.
-    // Ignoramos descripciones largas, JSONs de especificaciones e imágenes pesadas.
-    const { data: productosReales, error } = await supabase
-        .from('products')
-        .select('id, name, category, sku, price_installments, variants_config')
-        .order('created_at', { ascending: false })
-        .limit(300); // Límite sano para no colgar la UI. Si pasás de 300, hay que implementar paginación real.
+    useEffect(() => {
+        async function fetchProductos() {
+            // 🚀 OPTIMIZACIÓN: Consulta liviana para que vuele
+            const { data, error } = await supabase
+                .from('products')
+                .select('id, name, category, sku, price_installments, variants_config')
+                .order('created_at', { ascending: false })
+                .limit(300);
 
-    if (error) console.error('Error cargando productos:', error.message);
+            if (error) {
+                console.error('Error cargando productos:', error.message);
+            } else if (data) {
+                setProductos(data);
+            }
+            setLoading(false);
+        }
+
+        fetchProductos();
+    }, []);
+
+    // 🔍 MOTOR DE BÚSQUEDA EN TIEMPO REAL
+    const productosFiltrados = productos.filter((prod) => {
+        // Si el buscador está vacío, los muestra todos
+        if (!busqueda) return true;
+
+        const termino = busqueda.toLowerCase();
+        const coincideNombre = prod.name?.toLowerCase().includes(termino);
+        const coincideSku = prod.sku?.toLowerCase().includes(termino);
+
+        return coincideNombre || coincideSku;
+    });
 
     const formatVariantes = (variantsConfig: any) => {
         if (!variantsConfig || variantsConfig.length === 0) return 'Sin variantes';
@@ -42,12 +70,23 @@ export default async function ListaProductos() {
             <div className="bg-white p-4 rounded-t-2xl border border-slate-200 border-b-0 flex gap-4">
                 <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                    <input type="text" placeholder="Buscar por nombre o código..." className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm" />
+                    <input
+                        type="text"
+                        value={busqueda}
+                        onChange={(e) => setBusqueda(e.target.value)}
+                        placeholder="Buscar por nombre o código..."
+                        className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
+                    />
                 </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-b-2xl overflow-hidden shadow-sm">
-                {productosReales && productosReales.length > 0 ? (
+            <div className="bg-white border border-slate-200 rounded-b-2xl overflow-hidden shadow-sm min-h-[300px]">
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center h-64 text-slate-400 gap-3">
+                        <Loader2 className="animate-spin text-indigo-500" size={32} />
+                        <p className="font-medium">Cargando catálogo...</p>
+                    </div>
+                ) : productosFiltrados.length > 0 ? (
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -59,7 +98,7 @@ export default async function ListaProductos() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {productosReales.map((prod) => (
+                            {productosFiltrados.map((prod) => (
                                 <tr key={prod.id} className="hover:bg-slate-50/50 transition-colors group">
                                     <td className="p-4 pl-6">
                                         <span className="font-bold text-slate-900 block">{prod.name}</span>
@@ -80,7 +119,6 @@ export default async function ListaProductos() {
                                             <Pencil size={18} />
                                         </Link>
 
-                                        {/* USAMOS EL NUEVO BOTÓN AQUÍ */}
                                         <DeleteButton id={prod.id} />
 
                                     </td>
@@ -91,7 +129,10 @@ export default async function ListaProductos() {
                 ) : (
                     <div className="p-20 text-center text-slate-500">
                         <Box size={60} className="mx-auto mb-4 text-slate-200" />
-                        <p className="text-xl font-bold text-slate-900">Tu catálogo está vacío</p>
+                        <p className="text-xl font-bold text-slate-900">
+                            {busqueda ? 'No se encontraron productos' : 'Tu catálogo está vacío'}
+                        </p>
+                        {busqueda && <p className="text-sm mt-2">Probá buscando con otras palabras o borrá el filtro.</p>}
                     </div>
                 )}
             </div>
