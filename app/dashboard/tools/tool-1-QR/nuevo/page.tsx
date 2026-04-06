@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, UploadCloud, Plus, Trash2, Tag, Image as ImageIcon, Link as LinkIcon, Info, ListTree, Loader2, PlusCircle } from 'lucide-react';
+import { supabase } from '@/lib/supabase'; // IMPORTADO PARA LEER ATRIBUTOS POR DEFECTO
 
 import { createProductAction, uploadImageAction } from '../actions';
 
@@ -21,18 +22,32 @@ export default function NuevoProductoUniversal() {
     const [precioLista, setPrecioLista] = useState('');
     const [precioEfectivo, setPrecioEfectivo] = useState('');
 
-    // UN SOLO LINK PARA TODO
     const [linkExterno, setLinkExterno] = useState('');
 
-    const [atributos, setAtributos] = useState([{ id: 1, clave: 'Marca', valor: '' }]);
+    const [atributos, setAtributos] = useState([{ id: 1, clave: '', valor: '' }]);
     const [variantes, setVariantes] = useState([{ id: 1, nombre: 'Opción 1', valores: '' }]);
     const [preciosExtra, setPreciosExtra] = useState<{ id: number, nombre: string, valor: string }[]>([]);
 
     const [imageUrls, setImageUrls] = useState<string[]>([]);
     const [imagenesSlots, setImagenesSlots] = useState<number[]>([1]);
 
-    // NUEVO ESTADO: Ocultar o mostrar logo global por defecto al crear
     const [showOwnerLogo, setShowOwnerLogo] = useState(true);
+
+    // NUEVO: Cargar atributos por defecto (Plantilla)
+    useEffect(() => {
+        async function fetchSettings() {
+            const { data } = await supabase.from('tool_qr_settings').select('*').eq('id', 1).single();
+            if (data && data.default_attributes) {
+                const attrs = data.default_attributes.split(',').map((attr: string, index: number) => ({
+                    id: Date.now() + index,
+                    clave: attr.trim(),
+                    valor: ''
+                }));
+                if (attrs.length > 0) setAtributos(attrs);
+            }
+        }
+        fetchSettings();
+    }, []);
 
     const agregarAtributo = () => setAtributos([...atributos, { id: Date.now(), clave: '', valor: '' }]);
     const eliminarAtributo = (id: number) => setAtributos(atributos.filter(a => a.id !== id));
@@ -102,7 +117,6 @@ export default function NuevoProductoUniversal() {
             custom_price_1_value: parseFloat(preciosExtra[0]?.valor) || null,
             custom_price_2_name: preciosExtra[1]?.nombre || null,
             custom_price_2_value: parseFloat(preciosExtra[1]?.valor) || null,
-            // Enviamos a la DB la decisión de mostrar u ocultar el logo
             show_owner_logo_this_product: showOwnerLogo
         };
 
@@ -161,7 +175,6 @@ export default function NuevoProductoUniversal() {
                             </div>
                         </div>
 
-                        {/* CHECKBOX SUTIL PARA OCULTAR EL LOGO */}
                         <div className="mt-6 pt-4 border-t border-slate-100">
                             <label className="flex items-center gap-3 cursor-pointer group w-fit">
                                 <input
@@ -185,7 +198,7 @@ export default function NuevoProductoUniversal() {
                             {atributos.map((atributo) => (
                                 <div key={atributo.id} className="flex items-center gap-3">
                                     <input type="text" placeholder="Ej: Marca" value={atributo.clave} onChange={(e) => actualizarAtributo(atributo.id, 'clave', e.target.value)} className="w-1/3 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500 transition-all" />
-                                    <input type="text" placeholder="Ej: Stanley" value={atributo.valor} onChange={(e) => actualizarAtributo(atributo.id, 'valor', e.target.value)} className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500 transition-all" />
+                                    <input type="text" placeholder="Valor..." value={atributo.valor} onChange={(e) => actualizarAtributo(atributo.id, 'valor', e.target.value)} className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500 transition-all" />
                                     <button onClick={() => eliminarAtributo(atributo.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
                                 </div>
                             ))}

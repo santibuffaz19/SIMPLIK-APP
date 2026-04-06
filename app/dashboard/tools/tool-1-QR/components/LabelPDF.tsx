@@ -4,7 +4,8 @@ const MM_TO_PT = 2.83465;
 
 export default function LabelPDF({
     productName, price, sku, qrCodeData, widthMm, heightMm, layout,
-    showPrice, showSku, showName, logoBase64, promoText, extraNote
+    showPrice, showSku, showName, logoBase64, promoText, extraNote,
+    marginTopMm = 0, marginLeftMm = 0 // NUEVOS MÁRGENES FINOS POR DEFECTO A 0
 }: any) {
     const widthPt = widthMm * MM_TO_PT;
     const heightPt = heightMm * MM_TO_PT;
@@ -23,7 +24,11 @@ export default function LabelPDF({
             justifyContent: !hasContent
                 ? (layout === 'qr-left' ? 'flex-start' : (layout === 'qr-right' ? 'flex-end' : 'center'))
                 : 'center',
-            padding: 6 * innerScale,
+            // SE APLICAN LOS MÁRGENES FINOS DE IMPRESORA CON LA MATEMÁTICA DE ESCALA
+            paddingTop: (6 + marginTopMm) * innerScale,
+            paddingLeft: (6 + marginLeftMm) * innerScale,
+            paddingRight: 6 * innerScale,
+            paddingBottom: 6 * innerScale,
         },
         leftSection: {
             flex: 1, flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start',

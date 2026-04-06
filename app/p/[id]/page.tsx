@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
-    Loader2, Tag, PlayCircle, ShieldCheck, Banknote, CreditCard, ListTree, Info, PlusCircle, ExternalLink, X, MessageCircle
+    Loader2, Tag, PlayCircle, ShieldCheck, Banknote, CreditCard, ListTree, Info, PlusCircle, ExternalLink, X, MessageCircle, Instagram
 } from 'lucide-react';
 
 export default function PaginaProductoPublico() {
@@ -15,8 +15,9 @@ export default function PaginaProductoPublico() {
 
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
-    // ESTADOS PARA LA CONFIGURACIÓN GLOBAL
+    // ESTADOS PARA LA CONFIGURACIÓN GLOBAL Y DE TOOLS
     const [companySettings, setCompanySettings] = useState<any>(null);
+    const [toolSettings, setToolSettings] = useState<any>(null);
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -29,6 +30,10 @@ export default function PaginaProductoPublico() {
             // 2. Buscamos la configuración global de la empresa
             const { data: settingsData } = await supabase.from('company_settings').select('*').eq('id', 1).single();
             if (settingsData) setCompanySettings(settingsData);
+
+            // 3. Buscamos la configuración del Catálogo QR (Para saber si ocultar precios)
+            const { data: tsData } = await supabase.from('tool_qr_settings').select('*').eq('id', 1).single();
+            if (tsData) setToolSettings(tsData);
 
             setLoading(false);
         }
@@ -82,10 +87,14 @@ export default function PaginaProductoPublico() {
     }
 
     // VERIFICACIÓN: ¿Mostramos el logo de la empresa?
-    // Debe estar activado globalmente, tener imagen, y no estar oculto en este producto específico.
     const showBusinessLogo = companySettings?.business_logo_url &&
         companySettings?.show_logo_globally &&
         product?.show_owner_logo_this_product !== false;
+
+    // VARIABLES DE PERSONALIZACIÓN
+    const brandColor = companySettings?.brand_color || '#4f46e5';
+    const currency = companySettings?.currency_symbol || '$';
+    const showPrices = toolSettings?.default_show_price !== false; // Si está false, modo mayorista activo
 
     // LINK WHATSAPP
     const waLink = companySettings?.whatsapp_number
@@ -149,7 +158,7 @@ export default function PaginaProductoPublico() {
                 <div className="flex flex-col gap-2 mb-6">
                     <div className="flex justify-between items-center">
                         {product.category && (
-                            <span className="bg-indigo-100 text-indigo-800 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider">
+                            <span style={{ backgroundColor: `${brandColor}15`, color: brandColor }} className="px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider">
                                 {product.category}
                             </span>
                         )}
@@ -167,37 +176,42 @@ export default function PaginaProductoPublico() {
                     )}
                 </div>
 
-                <div className={`grid gap-3 mb-3 ${hasCash && hasCard ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                    {hasCash && (
-                        <div className="bg-emerald-50 rounded-[2rem] p-5 border-2 border-emerald-200 flex flex-col justify-center items-center text-center shadow-sm">
-                            <span className="text-sm font-black text-emerald-800 uppercase tracking-widest mb-1 flex items-center gap-1.5">
-                                <Banknote size={18} /> Efectivo
-                            </span>
-                            <span className="text-4xl font-black text-emerald-600 tracking-tighter leading-none">${product.price_cash}</span>
-                        </div>
-                    )}
+                {/* BLOQUE DE PRECIOS CONDICIONAL (MODO MAYORISTA) */}
+                {showPrices && (
+                    <>
+                        <div className={`grid gap-3 mb-3 ${hasCash && hasCard ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                            {hasCash && (
+                                <div className="bg-emerald-50 rounded-[2rem] p-5 border-2 border-emerald-200 flex flex-col justify-center items-center text-center shadow-sm">
+                                    <span className="text-sm font-black text-emerald-800 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                                        <Banknote size={18} /> Efectivo
+                                    </span>
+                                    <span className="text-4xl font-black text-emerald-600 tracking-tighter leading-none">{currency}{product.price_cash}</span>
+                                </div>
+                            )}
 
-                    {hasCard && (
-                        <div className="bg-slate-50 rounded-[2rem] p-5 border-2 border-slate-200 flex flex-col justify-center items-center text-center shadow-sm">
-                            <span className="text-sm font-black text-slate-600 uppercase tracking-widest mb-1 flex items-center gap-1.5">
-                                <CreditCard size={18} /> Lista
-                            </span>
-                            <span className="text-4xl font-black text-slate-800 tracking-tighter leading-none">${product.price_installments}</span>
+                            {hasCard && (
+                                <div className="bg-slate-50 rounded-[2rem] p-5 border-2 border-slate-200 flex flex-col justify-center items-center text-center shadow-sm">
+                                    <span className="text-sm font-black text-slate-600 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                                        <CreditCard size={18} /> Lista
+                                    </span>
+                                    <span className="text-4xl font-black text-slate-800 tracking-tighter leading-none">{currency}{product.price_installments}</span>
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
 
-                {extraPrices.length > 0 && (
-                    <div className="flex flex-col gap-3 mb-6">
-                        {extraPrices.map((ep, idx) => (
-                            <div key={idx} className="bg-indigo-50/50 rounded-2xl p-4 border-2 border-indigo-100 flex justify-between items-center shadow-sm">
-                                <span className="text-sm font-black text-indigo-800 uppercase tracking-widest flex items-center gap-2">
-                                    <PlusCircle size={18} className="text-indigo-400" /> {ep.name}
-                                </span>
-                                <span className="text-3xl font-black text-indigo-700 tracking-tighter leading-none">${ep.value}</span>
+                        {extraPrices.length > 0 && (
+                            <div className="flex flex-col gap-3 mb-6">
+                                {extraPrices.map((ep, idx) => (
+                                    <div key={idx} className="bg-indigo-50/50 rounded-2xl p-4 border-2 border-indigo-100 flex justify-between items-center shadow-sm">
+                                        <span className="text-sm font-black text-indigo-800 uppercase tracking-widest flex items-center gap-2">
+                                            <PlusCircle size={18} className="text-indigo-400" /> {ep.name}
+                                        </span>
+                                        <span className="text-3xl font-black text-indigo-700 tracking-tighter leading-none">{currency}{ep.value}</span>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
+                        )}
+                    </>
                 )}
                 {extraPrices.length === 0 && <div className="mb-6"></div>}
 
@@ -231,16 +245,26 @@ export default function PaginaProductoPublico() {
                     </div>
                 )}
 
-                {/* --- NUEVA SECCIÓN DE INTEGRACIONES Y MARCA (SUTIL) --- */}
+                {/* --- NUEVA SECCIÓN DE INTEGRACIONES Y MARCA CON ESTILO PERSONALIZADO --- */}
                 <div className="mt-12 flex flex-col items-center justify-center gap-6">
 
-                    {/* BOTÓN DE WHATSAPP */}
-                    {waLink && (
-                        <a href={waLink} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-white border border-emerald-200 shadow-sm hover:shadow-md transition-all px-6 py-3 rounded-full text-emerald-700 active:scale-95">
-                            <MessageCircle size={18} className="text-emerald-500" />
-                            <span className="text-xs font-black uppercase tracking-widest">Consultar Producto</span>
-                        </a>
-                    )}
+                    <div className="flex flex-wrap items-center justify-center gap-3">
+                        {/* BOTÓN DE WHATSAPP CON BRAND COLOR */}
+                        {waLink && (
+                            <a href={waLink} target="_blank" rel="noopener noreferrer" style={{ borderColor: brandColor, color: brandColor }} className="flex items-center justify-center gap-2 bg-white border shadow-sm hover:shadow-md transition-all px-6 py-3 rounded-full active:scale-95">
+                                <MessageCircle size={18} style={{ color: brandColor }} />
+                                <span className="text-xs font-black uppercase tracking-widest">Consultar</span>
+                            </a>
+                        )}
+
+                        {/* BOTÓN DE INSTAGRAM CON BRAND COLOR */}
+                        {companySettings?.instagram_url && (
+                            <a href={companySettings.instagram_url} target="_blank" rel="noopener noreferrer" style={{ borderColor: brandColor, color: brandColor }} className="flex items-center justify-center gap-2 bg-white border shadow-sm hover:shadow-md transition-all px-6 py-3 rounded-full active:scale-95">
+                                <Instagram size={18} style={{ color: brandColor }} />
+                                <span className="text-xs font-black uppercase tracking-widest">Instagram</span>
+                            </a>
+                        )}
+                    </div>
 
                     <div className="flex flex-col items-center gap-4">
                         {/* LOGO DE LA EMPRESA */}
