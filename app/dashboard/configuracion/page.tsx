@@ -1,23 +1,18 @@
-'use client';
-
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Building2, QrCode, ArrowRight, ArrowLeft } from 'lucide-react';
 
 export default function ConfiguracionHub() {
-    const router = useRouter();
-
     return (
         <div className="max-w-6xl mx-auto p-8 font-sans text-slate-800">
 
-            {/* BOTÓN DE VOLVER DINÁMICO */}
+            {/* BOTÓN DE VOLVER FIJO Y SEGURO */}
             <div className="mb-6">
-                <button
-                    onClick={() => router.back()}
-                    className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm hover:shadow cursor-pointer"
+                <Link
+                    href="/dashboard/tools/tool-1-QR"
+                    className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm hover:shadow"
                 >
-                    <ArrowLeft size={16} /> Volver a la herramienta
-                </button>
+                    <ArrowLeft size={16} /> Volver al Catálogo QR
+                </Link>
             </div>
 
             <header className="mb-10">
