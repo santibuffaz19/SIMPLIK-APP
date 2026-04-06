@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, QrCode, Settings, LogOut, Box, Package, Menu, X } from 'lucide-react';
+import { LayoutDashboard, QrCode, Settings, LogOut, Box, Package, Menu, X, BookOpen } from 'lucide-react';
 
 export default function Sidebar() {
     const pathname = usePathname();
@@ -58,6 +58,12 @@ export default function Sidebar() {
                             <Link href="/dashboard/tools/tool-2-pedidos" onClick={() => setIsOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors border border-emerald-500/20">
                                 <Package size={20} />
                                 <span className="font-medium">Comandas Internas</span>
+                            </Link>
+
+                            {/* NUEVO: TOOL 3 - CATÁLOGOS 3D */}
+                            <Link href="/dashboard/tools/tool-3-catalogos" onClick={() => setIsOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 transition-colors border border-violet-500/20">
+                                <BookOpen size={20} />
+                                <span className="font-medium">Catálogos 3D</span>
                             </Link>
                         </div>
 
