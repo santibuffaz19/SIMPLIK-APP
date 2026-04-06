@@ -27,8 +27,9 @@ export default function CatalogosDashboard() {
 
     const handleEliminarCatalogo = async (id: string) => {
         if (!confirm('¿Seguro que querés eliminar esta revista interactiva?')) return;
+        // Borrado optimista de la UI
+        setCatalogos(catalogos.filter(c => c.id !== id));
         await eliminarCatalogoAction(id);
-        cargarDatos();
     };
 
     return (
@@ -96,7 +97,6 @@ export default function CatalogosDashboard() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* UI de Colecciones (lo dejamos preparado para conectarlo luego) */}
                     <div className="col-span-full py-20 text-center border-2 border-dashed border-slate-200 rounded-3xl bg-white/50">
                         <Layers size={48} className="mx-auto text-slate-300 mb-4" />
                         <h3 className="text-xl font-bold text-slate-700 mb-2">Gestor de Colecciones</h3>

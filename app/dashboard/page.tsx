@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { QrCode, Package, ArrowRight, Settings, LayoutGrid, Lock } from 'lucide-react';
+import { QrCode, Package, ArrowRight, Settings, LayoutGrid, Lock, BookOpen } from 'lucide-react';
 
 export default function DashboardHome() {
     return (
@@ -12,10 +12,8 @@ export default function DashboardHome() {
                         <div className="bg-indigo-600 p-2.5 rounded-xl shadow-sm">
                             <LayoutGrid size={24} className="text-white" />
                         </div>
-                        {/* CORREGIDO: text-slate-900 para que se vea súper nítido */}
                         <h1 className="text-4xl font-black text-slate-900 tracking-tight">Bienvenido a Simplik</h1>
                     </div>
-                    {/* CORREGIDO: text-slate-500 para el subtítulo */}
                     <p className="text-slate-500 font-medium text-lg md:ml-14">Seleccioná la herramienta con la que vas a trabajar hoy.</p>
                 </div>
 
@@ -59,19 +57,20 @@ export default function DashboardHome() {
                     </div>
                 </Link>
 
-                {/* PRÓXIMAMENTE */}
-                <div className="relative bg-slate-900 p-8 rounded-3xl border border-slate-800 border-dashed flex flex-col h-full opacity-60">
-                    <div className="bg-slate-800 border border-slate-700 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                        <Lock size={28} className="text-slate-400" />
+                {/* TOOL 3: CATÁLOGOS 3D */}
+                <Link href="/dashboard/tools/tool-3-catalogos" className="relative bg-slate-900 p-8 rounded-3xl border border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group flex flex-col h-full overflow-hidden">
+                    <div className="absolute inset-0 bg-violet-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="bg-slate-800 border border-slate-700 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:border-violet-700 transition-colors duration-300 relative">
+                        <BookOpen size={30} className="text-slate-300 group-hover:text-violet-400 transition-colors" />
                     </div>
-                    <h2 className="text-2xl font-black text-slate-300 mb-3">Próximamente...</h2>
-                    <p className="text-slate-400 mb-8 font-medium leading-relaxed flex-1">
-                        Estamos construyendo nuevos módulos para potenciar aún más la eficiencia de tu negocio.
+                    <h2 className="text-2xl font-black text-white mb-3 group-hover:text-violet-400 transition-colors relative">Catálogos 3D</h2>
+                    <p className="text-slate-300 mb-8 font-medium leading-relaxed flex-1 relative">
+                        Creá revistas interactivas (Lookbooks) con tus productos para enviarle a tus clientes.
                     </p>
-                    <div className="mt-auto flex items-center gap-2 text-slate-400 font-black text-xs uppercase tracking-widest">
-                        En desarrollo
+                    <div className="mt-auto flex items-center gap-2 text-violet-400 font-black text-xs uppercase tracking-widest opacity-80 group-hover:opacity-100 transition-opacity relative">
+                        Abrir Herramienta <ArrowRight size={16} className="group-hover:translate-x-1.5 transition-transform" />
                     </div>
-                </div>
+                </Link>
 
             </div>
         </div>
