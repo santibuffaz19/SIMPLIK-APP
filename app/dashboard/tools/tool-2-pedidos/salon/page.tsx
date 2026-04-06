@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Store, Send, Flame, Minus, Plus, Clock, CheckCircle2, XCircle, RefreshCw, PackageSearch, ListPlus, Trash2, RotateCcw, X, MessageSquareWarning, Camera } from 'lucide-react';
+import { ArrowLeft, Store, Send, Flame, Minus, Plus, Clock, CheckCircle2, XCircle, RefreshCw, PackageSearch, ListPlus, Trash2, RotateCcw, X, MessageSquareWarning, Camera, Package } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { crearPedidoAction, obtenerPedidosActivosAction, actualizarEstadoPedidoAction, eliminarPedidoAction, responderProblemaAction, obtenerConfiguracionPedidosAction } from '../actions';
 
