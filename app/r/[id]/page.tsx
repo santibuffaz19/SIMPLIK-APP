@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Loader2, MessageSquareText, Info, X, ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { Loader2, MessageSquareText, Info, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const convertirUrlDrive = (url: string) => {
     if (!url || !url.includes('drive.google.com')) return url;
@@ -267,16 +267,21 @@ export default function RevistaPublica() {
 
     const renderPages = () => {
         const pages = [];
-
         pages.push(
-            <div className="paper absolute w-1/2 h-full top-0 right-0 md:origin-left origin-top md:rotate-y-0 rotate-x-0 transition-transform duration-800 ease-[cubic-bezier(0.3,0.0,0.2,1)] cursor-grab active:cursor-grabbing will-change-transform" key="p0" style={{ transformStyle: 'preserve-3d' }}>
-                <div className="front absolute w-full h-full top-0 left-0 bg-white overflow-hidden flex flex-col items-center justify-center text-center p-4 md:rounded-r-2xl rounded-b-2xl shadow-xl" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(0deg) translateZ(1px)', backgroundColor: coverBg, color: '#fff', fontFamily: font }}>
-                    <h1 className="text-3xl md:text-5xl font-black tracking-[0.2em] md:tracking-[0.3em] uppercase">{catalogo.cover_title}</h1>
-                    {catalogo.description && <p className="mt-4 opacity-70 text-sm md:text-base max-w-[80%]">{catalogo.description}</p>}
-                    <p className="mt-8 text-xs opacity-50 uppercase tracking-widest animate-pulse">Arrastrá para abrir</p>
+            <div className="paper" key="p0">
+                <div className="front" style={{ backgroundColor: coverBg, color: '#fff', fontFamily: font }}>
+                    <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                        <h1 className="text-3xl md:text-5xl font-black tracking-[0.2em] md:tracking-[0.3em] uppercase">{catalogo.cover_title}</h1>
+                        {catalogo.description && <p className="mt-4 opacity-70 text-sm md:text-base max-w-[80%]">{catalogo.description}</p>}
+                        <p className="mt-8 text-xs opacity-50 uppercase tracking-widest animate-pulse">Arrastrá para abrir</p>
+                    </div>
                 </div>
-                <div className="back absolute w-full h-full top-0 left-0 bg-white overflow-hidden flex flex-col p-4 md:p-8 md:rounded-l-2xl rounded-t-2xl shadow-xl" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg) translateZ(1px)', fontFamily: font }}>
-                    {items[0] && <ItemContent item={items[0]} settings={settings} onOpenMedia={setSelectedMediaItem} />}
+                <div className="back" style={{ fontFamily: font }}>
+                    <div className="absolute top-0 right-0 h-full w-4 bg-gradient-to-l from-black/5 to-transparent z-10 pointer-events-none hidden md:block"></div>
+                    <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-b from-black/5 to-transparent z-10 pointer-events-none md:hidden"></div>
+                    <div className="p-4 md:p-8 h-full">
+                        {items[0] && <ItemContent item={items[0]} settings={settings} onOpenMedia={setSelectedMediaItem} />}
+                    </div>
                 </div>
             </div>
         );
@@ -285,12 +290,20 @@ export default function RevistaPublica() {
             const frontItem = items[i * 2 - 1];
             const backItem = items[i * 2];
             pages.push(
-                <div className="paper absolute w-1/2 h-full top-0 right-0 md:origin-left origin-top md:rotate-y-0 rotate-x-0 transition-transform duration-800 ease-[cubic-bezier(0.3,0.0,0.2,1)] cursor-grab active:cursor-grabbing will-change-transform" key={`p${i}`} style={{ transformStyle: 'preserve-3d' }}>
-                    <div className="front absolute w-full h-full top-0 left-0 bg-white overflow-hidden flex flex-col p-4 md:p-8 md:rounded-r-2xl rounded-b-2xl shadow-xl" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(0deg) translateZ(1px)', fontFamily: font }}>
-                        {frontItem && <ItemContent item={frontItem} settings={settings} onOpenMedia={setSelectedMediaItem} />}
+                <div className="paper" key={`p${i}`}>
+                    <div className="front" style={{ fontFamily: font }}>
+                        <div className="absolute top-0 left-0 h-full w-4 bg-gradient-to-r from-black/5 to-transparent z-10 pointer-events-none hidden md:block"></div>
+                        <div className="absolute bottom-0 left-0 w-full h-4 bg-gradient-to-t from-black/5 to-transparent z-10 pointer-events-none md:hidden"></div>
+                        <div className="p-4 md:p-8 h-full">
+                            {frontItem && <ItemContent item={frontItem} settings={settings} onOpenMedia={setSelectedMediaItem} />}
+                        </div>
                     </div>
-                    <div className="back absolute w-full h-full top-0 left-0 bg-white overflow-hidden flex flex-col p-4 md:p-8 md:rounded-l-2xl rounded-t-2xl shadow-xl" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg) translateZ(1px)', fontFamily: font }}>
-                        {backItem ? <ItemContent item={backItem} settings={settings} onOpenMedia={setSelectedMediaItem} /> : <EndCover bg={coverBg} />}
+                    <div className="back" style={{ fontFamily: font }}>
+                        <div className="absolute top-0 right-0 h-full w-4 bg-gradient-to-l from-black/5 to-transparent z-10 pointer-events-none hidden md:block"></div>
+                        <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-b from-black/5 to-transparent z-10 pointer-events-none md:hidden"></div>
+                        <div className="p-4 md:p-8 h-full">
+                            {backItem ? <ItemContent item={backItem} settings={settings} onOpenMedia={setSelectedMediaItem} /> : <EndCover />}
+                        </div>
                     </div>
                 </div>
             );
@@ -298,13 +311,19 @@ export default function RevistaPublica() {
 
         if (items.length % 2 !== 0) {
             pages.push(
-                <div className="paper absolute w-1/2 h-full top-0 right-0 md:origin-left origin-top md:rotate-y-0 rotate-x-0 transition-transform duration-800 ease-[cubic-bezier(0.3,0.0,0.2,1)] cursor-grab active:cursor-grabbing will-change-transform" key={`p_end`} style={{ transformStyle: 'preserve-3d' }}>
-                    <div className="front absolute w-full h-full top-0 left-0 overflow-hidden flex flex-col p-4 md:p-8 bg-white md:rounded-r-2xl rounded-b-2xl shadow-xl" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(0deg) translateZ(1px)', fontFamily: font }}>
-                        <EndCover bg={coverBg} />
+                <div className="paper" key={`p_end`}>
+                    <div className="front bg-white" style={{ fontFamily: font }}>
+                        <div className="absolute top-0 left-0 h-full w-4 bg-gradient-to-r from-black/5 to-transparent z-10 pointer-events-none hidden md:block"></div>
+                        <div className="absolute bottom-0 left-0 w-full h-4 bg-gradient-to-t from-black/5 to-transparent z-10 pointer-events-none md:hidden"></div>
+                        <div className="p-4 md:p-8 h-full">
+                            <EndCover />
+                        </div>
                     </div>
-                    <div className="back absolute w-full h-full top-0 left-0 overflow-hidden flex flex-col items-center justify-center p-4 md:rounded-l-2xl rounded-t-2xl shadow-xl" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg) translateZ(1px)', backgroundColor: coverBg, color: '#fff', fontFamily: font }}>
-                        <h2 className="text-2xl md:text-4xl font-black uppercase tracking-widest">FIN</h2>
-                        <p className="mt-4 text-xs opacity-50 uppercase tracking-widest">Deslizá para volver</p>
+                    <div className="back" style={{ backgroundColor: coverBg, color: '#fff', fontFamily: font }}>
+                        <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+                            <h2 className="text-2xl md:text-4xl font-black uppercase tracking-widest">FIN</h2>
+                            <p className="mt-4 text-xs opacity-50 uppercase tracking-widest">Deslizá para volver</p>
+                        </div>
                     </div>
                 </div>
             );
@@ -325,7 +344,20 @@ export default function RevistaPublica() {
                     .nav-btn { width: 45px; height: 45px; font-size: 18px; }
                     .nav-btn.prev-btn { left: 50%; top: 15px; transform: translateX(-50%); }
                     .nav-btn.next-btn { left: 50%; top: auto; bottom: 15px; right: auto; transform: translateX(-50%); }
-                    .paper { width: 100% !important; height: 50% !important; top: 50% !important; left: 0 !important; }
+                }
+
+                /* MAGIA CSS: CLASES ORIGINALES PARA QUE NO SE DEFORME EL 3D */
+                .paper { position: absolute; width: 50%; height: 100%; top: 0; right: 0; transform-style: preserve-3d; transform-origin: left center; transition: transform 0.8s cubic-bezier(0.3, 0.0, 0.2, 1); cursor: grab; transform: rotateY(0deg); will-change: transform; }
+                .paper:active { cursor: grabbing; }
+                .front, .back { position: absolute; width: 100%; height: 100%; top: 0; left: 0; backface-visibility: hidden; background-color: #fff; overflow: hidden; display: flex; flex-direction: column; }
+                
+                .front { transform: rotateY(0deg) translateZ(1px); border-radius: 0 20px 20px 0; box-shadow: inset 4px 0 15px rgba(0,0,0,0.05), 10px 15px 40px rgba(0,0,0,0.2); }
+                .back { transform: rotateY(180deg) translateZ(1px); border-radius: 20px 0 0 20px; box-shadow: inset -4px 0 15px rgba(0,0,0,0.05), -10px 15px 40px rgba(0,0,0,0.2); }
+                
+                @media (max-width: 768px) {
+                    .paper { width: 100% !important; height: 50% !important; top: 50% !important; left: 0 !important; transform-origin: top center; transform: rotateX(0deg); }
+                    .front { transform: rotateX(0deg) translateZ(1px); border-radius: 0 0 16px 16px; box-shadow: inset 0 4px 15px rgba(0,0,0,0.05), 0 15px 30px rgba(0,0,0,0.15); }
+                    .back { transform: rotateX(180deg) translateZ(1px); border-radius: 16px 16px 0 0; box-shadow: inset 0 -4px 15px rgba(0,0,0,0.05), 0 -15px 30px rgba(0,0,0,0.15); }
                 }
 
                 .tech-specs-overlay::-webkit-scrollbar { display: none; }
@@ -348,9 +380,8 @@ export default function RevistaPublica() {
 
 function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any, onOpenMedia: (item: any) => void }) {
     const [showSpecs, setShowSpecs] = useState(false);
-    const imageUrl = convertirUrlDrive(item.image_url);
 
-    // ESCUDO ANTI-CRASHEO DRIVE: Asegura que imgUrls SIEMPRE sea un array válido.
+    // Arrays Seguros para Drive: Evita el crasheo si viene un string o vacío.
     let imgUrls: string[] = [];
     if (Array.isArray(item.image_urls) && item.image_urls.length > 0) {
         imgUrls = item.image_urls;
@@ -358,6 +389,7 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
         imgUrls = [item.image_url];
     }
 
+    const principalImage = imgUrls.length > 0 ? convertirUrlDrive(imgUrls[0]) : 'https://placehold.co/600x800?text=No+Image';
     const hasMultipleMedia = imgUrls.length > 1 || !!item.video_url;
 
     const waLink = settings?.whatsapp_number
@@ -390,9 +422,9 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
                 </div>
             )}
 
-            {/* CONTENEDOR IMAGEN MÁS CHICO PARA DAR ESPACIO A TEXTOS */}
+            {/* CONTENEDOR IMAGEN (Clickable para Carrusel) */}
             <div className="w-[45%] md:w-full h-[45%] md:h-[50%] min-h-[200px] rounded-2xl overflow-hidden shrink-0 mb-0 md:mb-5 bg-slate-50 flex items-center justify-center cursor-pointer relative group clickable-media border border-slate-100" onClick={(e) => { e.stopPropagation(); onOpenMedia(item); }}>
-                <img src={imageUrl || 'https://placehold.co/600x800?text=No+Image'} className="w-full h-full object-contain pointer-events-none transition-transform group-hover:scale-105" onError={(e) => { (e.target as any).src = 'https://placehold.co/600x800?text=Error'; }} />
+                <img src={principalImage} className="w-full h-full object-contain pointer-events-none transition-transform group-hover:scale-105" onError={(e) => { (e.target as any).src = 'https://placehold.co/600x800?text=Error'; }} />
                 {hasMultipleMedia && (
                     <div className="absolute bottom-3 right-3 bg-black/80 text-white text-xs px-3 py-1.5 rounded-full font-bold backdrop-blur-sm flex items-center gap-1 shadow-lg pointer-events-none">
                         Ver galería
@@ -400,17 +432,17 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
                 )}
             </div>
 
-            {/* TEXTOS Y BOTONES (Rediseño grande y profesional) */}
+            {/* TEXTOS GIGANTES Y PROFESIONALES */}
             <div className="w-[55%] md:w-full flex-1 flex flex-col justify-center md:justify-start py-0 overflow-y-auto hide-scrollbar">
                 <div className="mb-4">
                     {item.sku && <span className="text-xs md:text-sm font-black text-slate-400 mb-1 block uppercase tracking-widest font-mono">{item.sku}</span>}
-                    <h3 className="text-2xl md:text-3xl font-black text-slate-950 leading-tight mb-2">{item.name}</h3>
-                    {item.price && <div className="text-3xl md:text-4xl font-black text-emerald-600 mb-4">${Number(item.price).toLocaleString('es-AR')}</div>}
+                    <h3 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-950 leading-tight mb-2">{item.name}</h3>
+                    {item.price && <div className="text-3xl md:text-4xl lg:text-5xl font-black text-emerald-600 mb-4">${Number(item.price).toLocaleString('es-AR')}</div>}
 
                     {item.variants && (
                         <div className="flex flex-wrap gap-2 mb-4 max-h-[80px] overflow-y-auto">
                             {item.variants.split('|').map((v: string, i: number) => (
-                                <span key={i} className="px-3 py-1.5 border-2 border-slate-200 rounded-xl text-xs font-black text-slate-700 bg-white">{v.trim()}</span>
+                                <span key={i} className="px-3 py-1.5 border-2 border-slate-200 rounded-xl text-xs md:text-sm font-black text-slate-700 bg-white">{v.trim()}</span>
                             ))}
                         </div>
                     )}
@@ -432,7 +464,6 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
 }
 
 function MediaCarouselModal({ item, onClose }: { item: any, onClose: () => void }) {
-    // ESCUDO ANTI-CRASHEO EN EL MODAL TAMBIÉN
     let imgUrls: string[] = [];
     if (Array.isArray(item.image_urls) && item.image_urls.length > 0) {
         imgUrls = item.image_urls;
@@ -490,9 +521,9 @@ function MediaCarouselModal({ item, onClose }: { item: any, onClose: () => void 
     );
 }
 
-function EndCover({ bg }: { bg: string }) {
+function EndCover() {
     return (
-        <div className="flex flex-col items-center justify-center h-full w-full bg-white text-center p-8 relative">
+        <div className="flex flex-col items-center justify-center h-full w-full text-center p-8">
             <h2 className="text-3xl md:text-5xl font-black text-slate-800 uppercase tracking-widest mb-4">FIN</h2>
             <div className="w-16 h-1 bg-slate-200 rounded-full mb-8 mx-auto"></div>
             <p className="text-sm md:text-base font-bold text-slate-400">Gracias por ver nuestro catálogo.</p>

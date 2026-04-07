@@ -141,9 +141,12 @@ export default function CatalogosDashboard() {
                                                 {copiedId === col.id ? <><Check size={16} /> Copiado</> : <><LinkIcon size={16} /> Copiar Link Público</>}
                                             </button>
                                             <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                                                <button onClick={() => handleEliminarColeccion(col.id)} className="p-2 text-slate-400 hover:text-red-500 bg-slate-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => handleEliminarColeccion(col.id)} className="p-2 text-slate-400 hover:text-red-500 bg-slate-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                                    <Link href={`/dashboard/tools/tool-3-catalogos/editar-coleccion/${col.id}`} className="p-2 text-slate-400 hover:text-violet-600 bg-slate-50 rounded-lg transition-colors"><Edit3 size={16} /></Link>
+                                                </div>
                                                 <a href={`/c/${col.id}`} target="_blank" className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-2 rounded-lg hover:bg-indigo-100 transition-colors">
-                                                    Abrir Vidriera <ExternalLink size={14} />
+                                                    Abrir <ExternalLink size={14} />
                                                 </a>
                                             </div>
                                         </div>

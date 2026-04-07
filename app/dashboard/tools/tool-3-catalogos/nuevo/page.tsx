@@ -31,7 +31,8 @@ export default function CrearRevista() {
     const [showDbModal, setShowDbModal] = useState(false);
     const [showManualModal, setShowManualModal] = useState(false);
 
-    const [manualImg, setManualImg] = useState('');
+    // NUEVO: Array de imágenes de Drive, pero manteniendo todos tus estados.
+    const [manualImages, setManualImages] = useState(['']);
     const [manualName, setManualName] = useState('');
     const [manualSku, setManualSku] = useState('');
     const [manualPrice, setManualPrice] = useState('');
@@ -57,8 +58,8 @@ export default function CrearRevista() {
             sku: prod.sku,
             price: prod.price_installments,
             image_url: prod.image_urls?.[0] || '',
-            image_urls: prod.image_urls || [], // Guardamos todas las fotos
-            video_url: prod.video_url || '', // Guardamos el video
+            image_urls: prod.image_urls || [],
+            video_url: prod.video_url || '',
             variants: prod.variants_config ? prod.variants_config.map((v: any) => v.valores).join(' | ') : '',
             technical_specs: prod.technical_specs || []
         }]);
@@ -66,10 +67,11 @@ export default function CrearRevista() {
     };
 
     const agregarProductoManualYGuardarEnBD = async () => {
-        if (!manualImg || !manualName) return alert("Imagen y Nombre son obligatorios");
+        const primaryImg = manualImages[0];
+        if (!primaryImg || !manualName) return alert("Al menos 1 Imagen y el Nombre son obligatorios");
         setLoading(true);
 
-        const finalImg = convertirUrlDrive(manualImg);
+        const convertedImages = manualImages.filter(img => img.trim() !== '').map(img => convertirUrlDrive(img));
         const finalSpecs = manualSpecs.filter(s => s.clave.trim() && s.valor.trim());
         const finalVariants = manualVariants.trim() ? [{ id: Date.now(), nombre: 'Variante', valores: manualVariants }] : [];
 
@@ -77,7 +79,7 @@ export default function CrearRevista() {
             name: manualName,
             sku: manualSku || null,
             price_installments: parseFloat(manualPrice) || 0,
-            image_urls: [finalImg],
+            image_urls: convertedImages,
             technical_specs: finalSpecs,
             variants_config: finalVariants
         }).select('*').single();
@@ -91,7 +93,7 @@ export default function CrearRevista() {
         agregarProductoDb(newProd);
         setProductosDB([newProd, ...productosDB]);
 
-        setManualImg(''); setManualName(''); setManualSku(''); setManualPrice(''); setManualVariants('');
+        setManualImages(['']); setManualName(''); setManualSku(''); setManualPrice(''); setManualVariants('');
         setManualSpecs([{ id: 1, clave: '', valor: '' }]);
         setShowManualModal(false);
         setLoading(false);
@@ -109,11 +111,20 @@ export default function CrearRevista() {
         setSaving(false);
     };
 
+    // Funciones para manual
     const agregarSpecManual = () => setManualSpecs([...manualSpecs, { id: Date.now(), clave: '', valor: '' }]);
     const actualizarSpecManual = (id: number, campo: 'clave' | 'valor', valor: string) => {
         setManualSpecs(manualSpecs.map(s => s.id === id ? { ...s, [campo]: valor } : s));
     };
     const eliminarSpecManual = (id: number) => setManualSpecs(manualSpecs.filter(s => s.id !== id));
+
+    const agregarImagenManual = () => setManualImages([...manualImages, '']);
+    const actualizarImagenManual = (index: number, valor: string) => {
+        const nuevas = [...manualImages];
+        nuevas[index] = valor;
+        setManualImages(nuevas);
+    };
+    const eliminarImagenManual = (index: number) => setManualImages(manualImages.filter((_, i) => i !== index));
 
     return (
         <div className="max-w-7xl mx-auto p-4 md:p-8 font-sans text-slate-800 pb-24 relative">
@@ -164,7 +175,7 @@ export default function CrearRevista() {
                             <h2 className="font-bold text-lg flex items-center gap-2 whitespace-nowrap"><BookOpen size={18} className="text-violet-500" /> Páginas ({items.length})</h2>
                             <div className="flex gap-2 shrink-0">
                                 <button onClick={() => setShowDbModal(true)} className="px-4 py-2 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg flex items-center gap-1.5 hover:bg-indigo-100 transition-colors"><Database size={15} /> Catálogo Web</button>
-                                <button onClick={() => setShowManualModal(true)} className="px-4 py-2 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-lg flex items-center gap-1.5 hover:bg-emerald-100 transition-colors"><LinkIcon size={15} /> Drive / Link Externo</button>
+                                <button onClick={() => setShowManualModal(true)} className="px-4 py-2 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-lg flex items-center gap-1.5 hover:bg-emerald-100 transition-colors"><LinkIcon size={15} /> Carga Manual (Drive)</button>
                             </div>
                         </div>
 
@@ -184,7 +195,7 @@ export default function CrearRevista() {
                                             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-1">
                                                 {item.sku && <span className="bg-white px-1.5 py-0.5 rounded border border-slate-200 font-mono text-[10px]">{item.sku}</span>}
                                                 {item.price && <span className="font-bold text-emerald-600">${item.price}</span>}
-                                                <span className="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-black uppercase">DB</span>
+                                                <span className="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-black uppercase">Agregado</span>
                                             </div>
                                         </div>
                                         <button onClick={() => eliminarItem(item.id)} className="p-2 text-slate-400 hover:text-red-500 bg-white rounded-lg border border-slate-200 transition-colors shrink-0"><Trash2 size={16} /></button>
@@ -224,50 +235,86 @@ export default function CrearRevista() {
                 </div>
             )}
 
-            {/* MODAL MANUAL CON GUÍA DE DRIVE */}
+            {/* MODAL MANUAL CON MULTIPLES LINKS Y TODAS LAS OPCIONES DE VUELTA */}
             {showManualModal && (
                 <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[2rem] w-full max-w-2xl max-h-[95vh] shadow-2xl overflow-hidden flex flex-col">
+                    <div className="bg-white rounded-[2rem] w-full max-w-4xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col">
                         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
                             <div>
-                                <h3 className="font-black text-lg flex items-center gap-2"><LinkIcon className="text-emerald-500" /> Carga por Link o Drive</h3>
-                                <p className="text-xs text-slate-500 font-medium">Este producto también se guardará en tu Catálogo General.</p>
+                                <h3 className="font-black text-xl flex items-center gap-2"><LinkIcon className="text-emerald-500" /> Carga Manual (Drive)</h3>
+                                <p className="text-xs text-slate-500 font-medium">Este producto se guardará permanentemente en tu Catálogo General.</p>
                             </div>
                             <button onClick={() => setShowManualModal(false)} className="p-2 bg-white rounded-full hover:bg-red-50 hover:text-red-500 transition-colors"><X size={20} /></button>
                         </div>
-                        <div className="p-6 space-y-6 overflow-y-auto flex-1 pr-3">
+
+                        <div className="p-6 md:p-8 space-y-8 overflow-y-auto flex-1 pr-3">
                             <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl text-emerald-800 space-y-2">
-                                <p className="font-bold text-sm flex items-center gap-2"><Info size={16} /> IMPORTANTE: ¿Cómo usar links de Google Drive?</p>
-                                <p className="text-xs leading-relaxed">No uses links de carpetas. Usá el link de la FOTO individual: Click derecho en la foto {'>'} Compartir {'>'} Cambiar a "Cualquier persona con el link" {'>'} Copiar link.</p>
+                                <p className="font-bold text-sm flex items-center gap-2"><Info size={16} /> REGLA DE ORO DE DRIVE:</p>
+                                <p className="text-xs leading-relaxed">No uses links de carpetas. Subí la foto y click derecho en ella {'>'} Compartir {'>'} Cambiar a "Cualquier persona con el link" {'>'} Copiar link.</p>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-                                <div className="md:col-span-4 flex flex-col items-center justify-center bg-slate-50 p-4 rounded-2xl border border-slate-200 min-h-[150px]">
-                                    {manualImg && manualImg.includes('http') ? (
-                                        <img src={convertirUrlDrive(manualImg)} className="max-w-full max-h-[140px] rounded-lg object-contain" onError={(e) => { (e.target as any).src = 'https://placehold.co/150x150?text=Error'; }} />
-                                    ) : (
-                                        <ImageIcon size={48} className="text-slate-300" />
+
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+                                {/* SECCIÓN FOTOS */}
+                                <div className="md:col-span-5 space-y-4">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Imágenes ({manualImages.length})</label>
+                                    <div className="space-y-3">
+                                        {manualImages.map((img, idx) => (
+                                            <div key={idx} className="flex gap-2">
+                                                <input type="url" value={img} onChange={e => actualizarImagenManual(idx, e.target.value)} placeholder={`Link ${idx + 1} (Drive)`} className={`w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm`} />
+                                                {idx > 0 && <button onClick={() => eliminarImagenManual(idx)} className="p-3 text-slate-400 hover:text-red-500"><Trash2 size={16} /></button>}
+                                            </div>
+                                        ))}
+                                        <button onClick={agregarImagenManual} className="text-emerald-600 text-xs font-bold flex items-center gap-1.5 pt-1"><PlusCircle size={15} /> Agregar otra imagen</button>
+                                    </div>
+
+                                    {manualImages[0] && manualImages[0].includes('http') && (
+                                        <div className="mt-4 flex justify-center">
+                                            <img src={convertirUrlDrive(manualImages[0])} className="max-w-full max-h-[150px] rounded-lg object-contain shadow-sm border border-slate-200" onError={(e) => { (e.target as any).src = 'https://placehold.co/150x150?text=Error'; }} />
+                                        </div>
                                     )}
                                 </div>
-                                <div className="md:col-span-8 space-y-4">
-                                    <div>
-                                        <label className="text-xs font-bold text-slate-500 uppercase">Link de la Imagen (Drive o Web) *</label>
-                                        <input type="url" value={manualImg} onChange={e => setManualImg(e.target.value)} placeholder="Ej: https://drive.google.com/..." className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xloutline-none focus:border-emerald-500 mt-1.5 text-sm" />
+
+                                {/* SECCIÓN DATOS */}
+                                <div className="md:col-span-7 grid grid-cols-2 gap-5">
+                                    <div className="col-span-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Nombre del Artículo *</label>
+                                        <input type="text" value={manualName} onChange={e => setManualName(e.target.value)} placeholder="Ej: Remera Lisa Algodón" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-emerald-500 mt-1 text-sm font-bold" />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-slate-500 uppercase">Nombre *</label>
-                                        <input type="text" value={manualName} onChange={e => setManualName(e.target.value)} placeholder="Ej: Remera Lisa Algodón" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-emerald-500 mt-1.5 text-sm" />
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">SKU</label>
+                                        <input type="text" value={manualSku} onChange={e => setManualSku(e.target.value)} placeholder="ART-123" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 text-sm font-mono" />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Precio $</label>
+                                        <input type="number" value={manualPrice} onChange={e => setManualPrice(e.target.value)} placeholder="15999" className="w-full p-3.5 bg-emerald-50 border border-emerald-100 rounded-xl mt-1 text-sm font-black text-emerald-800" />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Variantes rápidas</label>
+                                        <input type="text" value={manualVariants} onChange={e => setManualVariants(e.target.value)} placeholder="Ej: S | M | L | XL" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 text-sm" />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><label className="text-xs font-bold text-slate-500 uppercase">SKU</label><input type="text" value={manualSku} onChange={e => setManualSku(e.target.value)} placeholder="ART-123" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono" /></div>
-                                <div><label className="text-xs font-bold text-slate-500 uppercase">Precio $</label><input type="number" value={manualPrice} onChange={e => setManualPrice(e.target.value)} placeholder="15999" className="w-full p-3.5 bg-emerald-50 border border-emerald-100 rounded-xl text-sm font-black" /></div>
+                            {/* SECCIÓN FICHA TÉCNICA */}
+                            <div className="border-t border-slate-100 pt-8">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-4">Ficha Técnica ({manualSpecs.length})</label>
+                                <div className="space-y-3">
+                                    {manualSpecs.map(s => (
+                                        <div key={s.id} className="flex gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 items-center">
+                                            <input type="text" value={s.clave} onChange={e => actualizarSpecManual(s.id, 'clave', e.target.value)} placeholder="Campo (Ej: Material)" className="flex-1 p-2.5 bg-white border border-slate-200 rounded-lg text-xs" />
+                                            <input type="text" value={s.valor} onChange={e => actualizarSpecManual(s.id, 'valor', e.target.value)} placeholder="Valor (Ej: Algodón)" className="flex-1 p-2.5 bg-white border border-slate-200 rounded-lg text-xs font-bold" />
+                                            <button onClick={() => eliminarSpecManual(s.id)} className="p-2 text-slate-300 hover:text-red-500"><X size={16} /></button>
+                                        </div>
+                                    ))}
+                                    <button onClick={agregarSpecManual} className="text-emerald-600 text-xs font-bold flex items-center gap-1.5 pt-1"><PlusCircle size={15} /> Agregar campo técnico</button>
+                                </div>
                             </div>
                         </div>
+
+                        {/* Botón Guardar */}
                         <div className="p-6 border-t border-slate-100 bg-slate-50 shrink-0">
-                            <button onClick={agregarProductoManualYGuardarEnBD} disabled={loading} className="w-full bg-emerald-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2">
-                                {loading ? <Loader2 size={20} className="animate-spin" /> : 'GUARDAR Y AGREGAR'}
+                            <button onClick={agregarProductoManualYGuardarEnBD} disabled={loading} className="w-full bg-emerald-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all text-lg">
+                                {loading ? <Loader2 size={24} className="animate-spin" /> : 'GUARDAR PRODUCTO Y AGREGAR A REVISTA'}
                             </button>
                         </div>
                     </div>
