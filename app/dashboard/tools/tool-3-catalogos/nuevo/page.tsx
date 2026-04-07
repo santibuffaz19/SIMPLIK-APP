@@ -35,8 +35,8 @@ export default function CrearRevista() {
     const [manualName, setManualName] = useState('');
     const [manualSku, setManualSku] = useState('');
     const [manualPrice, setManualPrice] = useState('');
-    const [manualVideo, setManualVideo] = useState(''); // Agregado campo para Video
     const [manualVariants, setManualVariants] = useState('');
+    const [manualVideo, setManualVideo] = useState('');
     const [manualSpecs, setManualSpecs] = useState([{ id: 1, clave: '', valor: '' }]);
 
     useEffect(() => {
@@ -81,8 +81,8 @@ export default function CrearRevista() {
             price_installments: parseFloat(manualPrice) || 0,
             image_urls: convertedImages,
             video_url: manualVideo || null,
+            technical_specs: finalSpecs,
             variants_config: finalVariants
-            // technical_specs no se manda a DB general por si la columna no existe, pero va a la revista
         }).select('*').single();
 
         if (error) {
@@ -91,21 +91,7 @@ export default function CrearRevista() {
             return;
         }
 
-        const itemRevista = {
-            type: 'db',
-            id: Date.now().toString(),
-            db_id: newProd.id,
-            name: newProd.name,
-            sku: newProd.sku,
-            price: newProd.price_installments,
-            image_url: convertedImages[0] || '',
-            image_urls: convertedImages,
-            video_url: manualVideo || '',
-            variants: manualVariants,
-            technical_specs: finalSpecs
-        };
-
-        setItems([...items, itemRevista]);
+        agregarProductoDb(newProd);
         setProductosDB([newProd, ...productosDB]);
 
         setManualImages(['']); setManualName(''); setManualSku(''); setManualPrice(''); setManualVariants(''); setManualVideo('');
@@ -225,10 +211,11 @@ export default function CrearRevista() {
                 </div>
             </div>
 
+            {/* MODAL DB */}
             {showDbModal && (
                 <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white rounded-[2rem] w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                             <h3 className="font-black text-lg flex items-center gap-2"><Database className="text-indigo-500" /> Catálogo Web</h3>
                             <button onClick={() => setShowDbModal(false)} className="p-2 bg-white rounded-full hover:bg-red-50 hover:text-red-500 transition-colors"><X size={20} /></button>
                         </div>
@@ -239,6 +226,7 @@ export default function CrearRevista() {
                                 <div className="flex flex-col items-center justify-center h-full text-slate-400">
                                     <Database size={48} className="mb-3 opacity-50" />
                                     <p className="font-bold">No hay productos en el Catálogo Web.</p>
+                                    <p className="text-sm mt-2">Podés usar la "Carga Manual (Drive)" para sumar artículos.</p>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -259,12 +247,13 @@ export default function CrearRevista() {
                 </div>
             )}
 
+            {/* MODAL MANUAL CON MULTIPLES FOTOS, VIDEO Y OPCIONES */}
             {showManualModal && (
                 <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white rounded-[2rem] w-full max-w-4xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col">
                         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
                             <div>
-                                <h3 className="font-black text-xl flex items-center gap-2"><LinkIcon className="text-emerald-500" /> Carga Manual (Drive/Links)</h3>
+                                <h3 className="font-black text-xl flex items-center gap-2"><LinkIcon className="text-emerald-500" /> Carga Manual (Drive/Web)</h3>
                                 <p className="text-xs text-slate-500 font-medium">Se guardará en tu catálogo de forma permanente.</p>
                             </div>
                             <button onClick={() => setShowManualModal(false)} className="p-2 bg-white rounded-full hover:bg-red-50 hover:text-red-500 transition-colors"><X size={20} /></button>
