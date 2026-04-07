@@ -6,14 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { Loader2, MessageSquareText, Info, X, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
-const convertirUrlDrive = (url: string) => {
-    if (!url || !url.includes('drive.google.com')) return url;
-    let fileId = '';
-    const match = url.match(/\/file\/d\/(.+?)\//) || url.match(/\?id=(.+?)(&|$)/);
-    if (match) fileId = match[1];
-    return fileId ? `https://drive.google.com/uc?id=${fileId}` : url;
-};
-
+// Ya no usamos convertirUrlDrive porque las imágenes ahora se suben a tu servidor.
 const extraerIdYoutube = (url: string) => {
     if (!url) return null;
     const match = url.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/watch\?.+&v=))([\w-]{11})/);
@@ -50,11 +43,11 @@ function RevistaPublicaContent() {
 
         const prevBtn = document.getElementById("prev-btn") as HTMLButtonElement;
         const nextBtn = document.getElementById("next-btn") as HTMLButtonElement;
-        const bookWrapper = document.getElementById("book-wrapper");
+        const bookShifter = document.getElementById("book-shifter"); // FIX DESCENTRADO
         const bookElement = document.getElementById("book");
 
         const papers = Array.from(document.querySelectorAll('.paper')) as HTMLElement[];
-        if (papers.length === 0 || !bookWrapper || !bookElement || !prevBtn || !nextBtn) return;
+        if (papers.length === 0 || !bookShifter || !bookElement || !prevBtn || !nextBtn) return;
 
         let currentPage = 0;
         let totalPages = papers.length;
@@ -81,7 +74,8 @@ function RevistaPublicaContent() {
                 shift = currentShift + (targetShift - currentShift) * progress;
             }
             const axis = isMobile() ? 'Y' : 'X';
-            bookWrapper!.style.transform = `translate(-50%, -50%) translate${axis}(${shift}%)`;
+            // Aplicamos el movimiento al Shifter interno para que el Wrapper quede fijo 100% centrado.
+            bookShifter!.style.transform = `translate${axis}(${shift}%)`;
         }
 
         function updateZIndexes(activePaperIndex: number | null, overrideZ: boolean) {
@@ -108,7 +102,7 @@ function RevistaPublicaContent() {
             if (currentPage < totalPages) {
                 const paper = papers[currentPage];
                 paper.style.transition = "transform 0.8s cubic-bezier(0.3, 0.0, 0.2, 1)";
-                bookWrapper!.style.transition = "transform 0.8s cubic-bezier(0.3, 0.0, 0.2, 1)";
+                bookShifter!.style.transition = "transform 0.8s cubic-bezier(0.3, 0.0, 0.2, 1)";
                 updateZIndexes(currentPage, true);
                 setTimeout(() => {
                     paper.style.transform = getTransformString(180);
@@ -125,7 +119,7 @@ function RevistaPublicaContent() {
                 currentPage--;
                 const paper = papers[currentPage];
                 paper.style.transition = "transform 0.8s cubic-bezier(0.3, 0.0, 0.2, 1)";
-                bookWrapper!.style.transition = "transform 0.8s cubic-bezier(0.3, 0.0, 0.2, 1)";
+                bookShifter!.style.transition = "transform 0.8s cubic-bezier(0.3, 0.0, 0.2, 1)";
                 updateZIndexes(currentPage, true);
                 setTimeout(() => {
                     paper.style.transform = getTransformString(0);
@@ -146,7 +140,7 @@ function RevistaPublicaContent() {
             let tempTarget = e.target;
             while (tempTarget && tempTarget !== document.body && tempTarget !== bookElement) {
                 if (['button', 'a', 'input', 'textarea'].includes(tempTarget.tagName?.toLowerCase()) ||
-                    (tempTarget.classList && (tempTarget.classList.contains('clickable-media') || tempTarget.classList.contains('tech-specs-overlay') || tempTarget.classList.contains('back-to-collection')))) {
+                    (tempTarget.classList && (tempTarget.classList.contains('clickable-media') || tempTarget.classList.contains('tech-specs-overlay')))) {
                     isClickable = true;
                     break;
                 }
@@ -179,7 +173,7 @@ function RevistaPublicaContent() {
             } else { isDragging = false; return; }
 
             currentPaper.style.transition = "none";
-            bookWrapper!.style.transition = "none";
+            bookShifter!.style.transition = "none";
             updateZIndexes(isFlippingNext ? currentPage : currentPage - 1, true);
         }
 
@@ -212,7 +206,7 @@ function RevistaPublicaContent() {
             if (!isDragging || !currentPaper || selectedMediaItem) return;
             isDragging = false;
             currentPaper.style.transition = "transform 0.8s cubic-bezier(0.3, 0.0, 0.2, 1)";
-            bookWrapper!.style.transition = "transform 0.8s cubic-bezier(0.3, 0.0, 0.2, 1)";
+            bookShifter!.style.transition = "transform 0.8s cubic-bezier(0.3, 0.0, 0.2, 1)";
 
             const transformStr = currentPaper.style.transform;
             const match = transformStr.match(/rotate[XY]\(([-\d.]+)deg\)/);
@@ -255,7 +249,7 @@ function RevistaPublicaContent() {
 
         updateZIndexes(null, false);
         updateBookPosition();
-        bookWrapper!.style.transition = "transform 0.8s cubic-bezier(0.3, 0.0, 0.2, 1)";
+        bookShifter!.style.transition = "transform 0.8s cubic-bezier(0.3, 0.0, 0.2, 1)";
 
         return () => {
             bookElement.removeEventListener("mousedown", startDrag);
@@ -281,11 +275,6 @@ function RevistaPublicaContent() {
         pages.push(
             <div className="paper" key="p0">
                 <div className="front" style={{ backgroundColor: coverBg, color: '#fff', fontFamily: font }}>
-                    {collectionId && (
-                        <Link href={`/c/${collectionId}`} className="absolute top-4 left-4 z-50 flex items-center gap-1.5 px-3 py-1.5 bg-black/30 backdrop-blur-sm rounded-full text-xs font-bold text-white back-to-collection hover:bg-black/50 transition-colors">
-                            <ArrowLeft size={14} /> Volver a Colección
-                        </Link>
-                    )}
                     <div className="flex flex-col items-center justify-center h-full text-center p-4">
                         <h1 className="text-3xl md:text-5xl font-black tracking-[0.2em] md:tracking-[0.3em] uppercase">{catalogo.cover_title}</h1>
                         {catalogo.description && <p className="mt-4 opacity-70 text-sm md:text-base max-w-[80%]">{catalogo.description}</p>}
@@ -353,7 +342,7 @@ function RevistaPublicaContent() {
                 __html: `
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;800;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Space+Grotesk:wght@400;700;900&display=swap');
                 
-                /* FIX DESCENTRADO TOTAL */
+                /* FIX DESCENTRADO TOTAL: El body no se mueve bajo ninguna circunstancia */
                 html, body { margin: 0; padding: 0; width: 100vw; height: 100dvh; overflow: hidden !important; background-color: #e2e8f0; }
                 
                 .nav-btn { position: absolute; background-color: #fff; color: #000; border: 2px solid #000; width: 60px; height: 60px; font-size: 24px; border-radius: 50%; cursor: pointer; transition: all 0.3s ease; display: flex; justify-content: center; align-items: center; z-index: 90; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
@@ -362,9 +351,9 @@ function RevistaPublicaContent() {
                 
                 @media (max-width: 768px) {
                     .nav-btn { width: 45px; height: 45px; font-size: 18px; }
-                    /* SOLUCIÓN FLECHAS CELULAR: Arriba y Abajo */
-                    .nav-btn.prev-btn { left: 50%; top: 15px; transform: translateX(-50%); margin-top: 0; }
-                    .nav-btn.next-btn { left: 50%; bottom: 15px; right: auto; top: auto; transform: translateX(-50%); margin-top: 0; }
+                    /* FIX FLECHAS CELULAR: Arriba y Abajo, en el medio, sin chocar con los bordes */
+                    .nav-btn.prev-btn { left: 50%; top: 25px; transform: translateX(-50%); margin-top: 0; }
+                    .nav-btn.next-btn { left: 50%; bottom: 25px; right: auto; top: auto; transform: translateX(-50%); margin-top: 0; }
                 }
 
                 .paper { position: absolute; width: 50%; height: 100%; top: 0; right: 0; transform-style: preserve-3d; transform-origin: left center; transition: transform 0.8s cubic-bezier(0.3, 0.0, 0.2, 1); cursor: grab; transform: rotateY(0deg); will-change: transform; }
@@ -384,6 +373,13 @@ function RevistaPublicaContent() {
                 .tech-specs-overlay { -ms-overflow-style: none; scrollbar-width: none; }
             `}} />
 
+            {/* BOTÓN VOLVER INDEPENDIENTE Y FLOTANTE */}
+            {collectionId && (
+                <Link href={`/c/${collectionId}`} className="fixed top-5 left-5 z-[99999] w-12 h-12 bg-slate-900/40 hover:bg-slate-900/80 backdrop-blur-md text-white rounded-full flex items-center justify-center transition-colors shadow-lg" title="Volver a la Colección">
+                    <ArrowLeft size={22} />
+                </Link>
+            )}
+
             <button className="nav-btn prev-btn" id="prev-btn" disabled>
                 <span className="hidden md:inline">◀</span><span className="inline md:hidden">▲</span>
             </button>
@@ -392,9 +388,11 @@ function RevistaPublicaContent() {
             </button>
 
             {/* CONTENEDOR FIJO Y CENTRADO */}
-            <div id="book-wrapper" className="fixed top-1/2 left-1/2 w-[88vw] max-w-[1200px] h-[85vh] max-h-[800px] md:h-[85vh] max-md:h-[70dvh] z-20" style={{ perspective: '3500px', transform: 'translate(-50%, -50%)' }}>
-                <div id="book" className="absolute w-full h-full top-0 left-0" style={{ transformStyle: 'preserve-3d' }}>
-                    {renderPages()}
+            <div id="book-wrapper-fixed" className="fixed top-1/2 left-1/2 w-[88vw] max-w-[1200px] h-[85vh] max-h-[800px] md:h-[85vh] max-md:h-[65dvh] z-20" style={{ perspective: '3500px', transform: 'translate(-50%, -50%)' }}>
+                <div id="book-shifter" className="w-full h-full transition-transform duration-800 ease-[cubic-bezier(0.3,0.0,0.2,1)]" style={{ transformStyle: 'preserve-3d' }}>
+                    <div id="book" className="absolute w-full h-full top-0 left-0" style={{ transformStyle: 'preserve-3d' }}>
+                        {renderPages()}
+                    </div>
                 </div>
             </div>
 
@@ -427,7 +425,7 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
         if (item.image_url) imgUrls = [item.image_url];
     }
 
-    const principalImage = imgUrls.length > 0 ? convertirUrlDrive(imgUrls[0]) : 'https://placehold.co/600x800?text=No+Image';
+    const principalImage = imgUrls.length > 0 ? imgUrls[0] : 'https://placehold.co/600x800?text=No+Image';
     const hasMultipleMedia = imgUrls.length > 1 || !!item.video_url;
 
     const waLink = settings?.whatsapp_number
@@ -436,10 +434,10 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
     const igLink = settings?.instagram_url || '#';
 
     return (
-        // LAYOUT CERO SCROLL: Reducimos padding en móvil para maximizar espacio
+        // LAYOUT CERO SCROLL Y LIMPIO PARA CELULAR
         <div className="flex flex-col h-full w-full overflow-hidden bg-white p-1 md:p-0">
             {item.technical_specs?.length > 0 && (
-                <button className="absolute top-2 right-2 md:top-4 md:right-4 z-30 p-1.5 md:p-2 bg-slate-900/10 hover:bg-slate-900/20 rounded-full transition-colors text-slate-700 back-to-collection" onClick={(e) => { e.stopPropagation(); setShowSpecs(!showSpecs); }}>
+                <button className="absolute top-2 right-2 md:top-4 md:right-4 z-30 p-1.5 md:p-2 bg-slate-900/10 hover:bg-slate-900/20 rounded-full transition-colors text-slate-700" onClick={(e) => { e.stopPropagation(); setShowSpecs(!showSpecs); }}>
                     <Info size={16} className="md:size-[20px]" />
                 </button>
             )}
@@ -448,7 +446,7 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
                 <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-40 p-4 md:p-6 rounded-2xl border border-slate-100 flex flex-col" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2 shrink-0">
                         <h4 className="font-black text-xs md:text-sm uppercase text-slate-500 tracking-wider">Ficha Técnica</h4>
-                        <button onClick={() => setShowSpecs(false)} className="p-1.5 bg-slate-100 rounded-full text-slate-500 hover:bg-red-50 hover:text-red-500 back-to-collection"><X size={16} /></button>
+                        <button onClick={() => setShowSpecs(false)} className="p-1.5 bg-slate-100 rounded-full text-slate-500 hover:bg-red-50 hover:text-red-500"><X size={16} /></button>
                     </div>
                     <div className="space-y-2 text-[10px] md:text-sm overflow-y-auto">
                         {item.technical_specs.map((spec: any, idx: number) => (
@@ -461,9 +459,9 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
                 </div>
             )}
 
-            {/* FIX AMONTONAMIENTO: Imagen ocupa 45% estricto */}
+            {/* IMAGEN: 45% en cel, 60% en PC para que se luzca */}
             <div
-                className="h-[45%] md:h-[50%] w-full rounded-lg md:rounded-2xl overflow-hidden bg-slate-50 flex items-center justify-center cursor-pointer relative group clickable-media border border-slate-100 shrink-0"
+                className="h-[45%] md:h-[60%] w-full rounded-lg md:rounded-2xl overflow-hidden bg-slate-50 flex items-center justify-center cursor-pointer relative group clickable-media border border-slate-100 shrink-0"
                 onClick={(e) => { e.stopPropagation(); onOpenMedia(item); }}
             >
                 <img src={principalImage} className="w-full h-full object-contain pointer-events-none transition-transform group-hover:scale-105" onError={(e) => { (e.target as any).src = 'https://placehold.co/600x800?text=Error'; }} />
@@ -474,13 +472,13 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
                 )}
             </div>
 
-            {/* FIX AMONTONAMIENTO: Textos adaptados para celular */}
+            {/* TEXTOS: Ajustados para no amontonarse en celular */}
             <div className="flex-1 flex flex-col justify-between overflow-hidden px-1 pt-2 md:pt-4 pb-1 md:pb-0">
 
-                <div className="shrink-0 mb-1">
+                <div className="shrink-0 mb-1 overflow-hidden">
                     {item.sku && <span className="text-[9px] md:text-sm font-black text-slate-400 mb-0.5 block uppercase tracking-widest font-mono truncate">{item.sku}</span>}
-                    <h3 className="text-base md:text-3xl lg:text-4xl font-black text-slate-950 leading-tight mb-0.5 line-clamp-2">{item.name}</h3>
-                    {item.price && <div className="text-xl md:text-4xl lg:text-5xl font-black text-emerald-600 mt-0.5">${Number(item.price).toLocaleString('es-AR')}</div>}
+                    <h3 className="text-base md:text-2xl lg:text-3xl font-black text-slate-950 leading-tight mb-0.5 line-clamp-2">{item.name}</h3>
+                    {item.price && <div className="text-lg md:text-3xl lg:text-4xl font-black text-emerald-600 mt-0.5">${Number(item.price).toLocaleString('es-AR')}</div>}
                 </div>
 
                 <div className="flex-1 min-h-0 flex flex-col justify-start overflow-hidden">
@@ -523,15 +521,15 @@ function MediaCarouselModal({ item, onClose }: { item: any, onClose: () => void 
     }
 
     const mediaSources = [
-        ...imgUrls.map((url: string) => ({ type: 'image', url: convertirUrlDrive(url) })),
+        ...imgUrls.map((url: string) => ({ type: 'image', url })),
     ];
 
     if (item.video_url) {
         const youtubeId = extraerIdYoutube(item.video_url);
         if (youtubeId) {
             mediaSources.push({ type: 'youtube', url: youtubeId });
-        } else if (item.video_url.includes('drive.google.com') || item.video_url.endsWith('.mp4') || item.video_url.endsWith('.mov')) {
-            mediaSources.push({ type: 'video', url: convertirUrlDrive(item.video_url) });
+        } else {
+            mediaSources.push({ type: 'video', url: item.video_url });
         }
     }
 
