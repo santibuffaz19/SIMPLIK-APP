@@ -31,11 +31,35 @@ export async function guardarCatalogoAction(catalogo: any) {
     } catch (error: any) { return { success: false, error: error.message }; }
 }
 
-// 4. Eliminar Revista
+// 4. Eliminar Revista Y LIMPIAR COLECCIONES
 export async function eliminarCatalogoAction(id: string) {
     try {
+        // 1. Borramos la revista de la base de datos
         const { error } = await supabase.from('tool_catalogs').delete().eq('id', id);
         if (error) throw new Error(error.message);
+
+        // 2. Buscamos en TODAS las colecciones si esta revista estaba adentro
+        const { data: colecciones } = await supabase.from('tool_catalog_collections').select('id, description');
+
+        if (colecciones) {
+            for (const col of colecciones) {
+                try {
+                    let mags = JSON.parse(col.description || '[]');
+                    // Filtramos sacando la revista que acabamos de borrar
+                    const filteredMags = mags.filter((m: any) => m.id !== id);
+
+                    // Si el tamaño cambió, significa que la revista estaba ahí y hay que actualizar la colección
+                    if (mags.length !== filteredMags.length) {
+                        await supabase.from('tool_catalog_collections')
+                            .update({ description: JSON.stringify(filteredMags) })
+                            .eq('id', col.id);
+                    }
+                } catch (e) {
+                    console.error("Error limpiando coleccion", e);
+                }
+            }
+        }
+
         revalidatePath('/dashboard/tools/tool-3-catalogos');
         return { success: true };
     } catch (error: any) { return { success: false, error: error.message }; }
@@ -58,16 +82,16 @@ export async function guardarConfiguracionCatalogosAction(config: any) {
     } catch (error: any) { return { success: false, error: error.message }; }
 }
 
-// 6. Obtener productos de la Base de Datos (Tool 1) para inyectarlos en la revista
+// 6. Obtener productos de la Base de Datos
 export async function obtenerProductosParaCatalogoAction() {
     try {
-        const { data, error } = await supabase.from('products').select('id, name, sku, price_installments, image_urls, variants_config');
+        const { data, error } = await supabase.from('products').select('id, name, sku, price_installments, image_urls, variants_config, video_url, technical_specs');
         if (error) throw new Error(error.message);
         return { success: true, data };
     } catch (error: any) { return { success: false, error: error.message }; }
 }
 
-// NUEVO: Guardar Colecciones
+// 7. Guardar Colecciones
 export async function guardarColeccionAction(coleccion: any) {
     try {
         const payload = {
@@ -82,7 +106,7 @@ export async function guardarColeccionAction(coleccion: any) {
     } catch (error: any) { return { success: false, error: error.message }; }
 }
 
-// NUEVO: Eliminar Colecciones
+// 8. Eliminar Colecciones
 export async function eliminarColeccionAction(id: string) {
     try {
         const { error } = await supabase.from('tool_catalog_collections').delete().eq('id', id);
