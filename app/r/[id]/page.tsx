@@ -81,8 +81,8 @@ function RevistaPublicaContent() {
                 shift = currentShift + (targetShift - currentShift) * progress;
             }
             const axis = isMobile() ? 'Y' : 'X';
-            // FIX DEFINITIVO DEL DESCENTRADO: Quitamos translate(-50%, -50%) que colisionaba con Flexbox.
-            bookWrapper!.style.transform = `translate${axis}(${shift}%)`;
+            // SOLUCIÓN DESCENTRADO: Fijamos el translate(-50%, -50%) matemáticamente siempre.
+            bookWrapper!.style.transform = `translate(-50%, -50%) translate${axis}(${shift}%)`;
         }
 
         function updateZIndexes(activePaperIndex: number | null, overrideZ: boolean) {
@@ -276,58 +276,70 @@ function RevistaPublicaContent() {
     const font = catalogo.font_family || 'Inter';
     const coverBg = catalogo.cover_color || '#0a0a0a';
 
-    // FIX DEFINITIVO DE PÁGINAS BUGUEADAS: 
-    // Mapeamos todas las caras en un array lineal estricto para no perder a nadie.
-    const faces: any[] = [];
-    faces.push({ type: 'cover_front' });
-    for (let i = 0; i < items.length; i++) {
-        faces.push({ type: 'item', data: items[i] });
-    }
-    faces.push({ type: 'end_cover' });
-    if (faces.length % 2 !== 0) {
-        faces.push({ type: 'empty_back' }); // Relleno impar para cerrar el libro
-    }
-
     const renderPages = () => {
         const pages = [];
-        for (let i = 0; i < faces.length; i += 2) {
-            const frontFace = faces[i];
-            const backFace = faces[i + 1];
 
+        pages.push(
+            <div className="paper" key="p0">
+                <div className="front" style={{ backgroundColor: coverBg, color: '#fff', fontFamily: font }}>
+                    {collectionId && (
+                        <Link href={`/c/${collectionId}`} className="absolute top-4 left-4 z-50 flex items-center gap-1.5 px-3 py-1.5 bg-black/30 backdrop-blur-sm rounded-full text-xs font-bold text-white back-to-collection hover:bg-black/50 transition-colors">
+                            <ArrowLeft size={14} /> Volver a Colección
+                        </Link>
+                    )}
+                    <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                        <h1 className="text-3xl md:text-5xl font-black tracking-[0.2em] md:tracking-[0.3em] uppercase">{catalogo.cover_title}</h1>
+                        {catalogo.description && <p className="mt-4 opacity-70 text-sm md:text-base max-w-[80%]">{catalogo.description}</p>}
+                        <p className="mt-8 text-xs opacity-50 uppercase tracking-widest animate-pulse">Arrastrá para abrir</p>
+                    </div>
+                </div>
+                <div className="back bg-white" style={{ fontFamily: font }}>
+                    <div className="absolute top-0 right-0 h-full w-4 bg-gradient-to-l from-black/5 to-transparent z-10 pointer-events-none hidden md:block"></div>
+                    <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-b from-black/5 to-transparent z-10 pointer-events-none md:hidden"></div>
+                    <div className="p-2 md:p-8 h-full flex flex-col overflow-hidden">
+                        {items[0] && <ItemContent item={items[0]} settings={settings} onOpenMedia={setSelectedMediaItem} />}
+                    </div>
+                </div>
+            </div>
+        );
+
+        for (let i = 1; i < Math.ceil(items.length / 2); i++) {
+            const frontItem = items[i * 2 - 1];
+            const backItem = items[i * 2];
             pages.push(
                 <div className="paper" key={`p${i}`}>
-                    <div className="front bg-white" style={frontFace.type === 'cover_front' ? { backgroundColor: coverBg, color: '#fff', fontFamily: font } : { fontFamily: font }}>
-                        {/* Sombras del lomo */}
+                    <div className="front bg-white" style={{ fontFamily: font }}>
                         <div className="absolute top-0 left-0 h-full w-4 bg-gradient-to-r from-black/5 to-transparent z-10 pointer-events-none hidden md:block"></div>
                         <div className="absolute bottom-0 left-0 w-full h-4 bg-gradient-to-t from-black/5 to-transparent z-10 pointer-events-none md:hidden"></div>
-
-                        <div className="h-full flex flex-col p-3 md:p-8">
-                            {frontFace.type === 'cover_front' && (
-                                <div className="flex flex-col items-center justify-center h-full text-center">
-                                    <h1 className="text-3xl md:text-5xl font-black tracking-[0.2em] md:tracking-[0.3em] uppercase line-clamp-4">{catalogo.cover_title}</h1>
-                                    {catalogo.description && <p className="mt-4 opacity-70 text-sm md:text-base max-w-[80%]">{catalogo.description}</p>}
-                                    <p className="mt-8 text-xs opacity-50 uppercase tracking-widest animate-pulse">Arrastrá para abrir</p>
-                                </div>
-                            )}
-                            {frontFace.type === 'item' && <ItemContent item={frontFace.data} settings={settings} onOpenMedia={setSelectedMediaItem} />}
-                            {frontFace.type === 'end_cover' && <EndCover />}
+                        <div className="p-2 md:p-8 h-full flex flex-col overflow-hidden">
+                            {frontItem && <ItemContent item={frontItem} settings={settings} onOpenMedia={setSelectedMediaItem} />}
                         </div>
                     </div>
-
-                    <div className="back bg-white" style={backFace.type === 'empty_back' ? { backgroundColor: coverBg, color: '#fff', fontFamily: font } : { fontFamily: font }}>
-                        {/* Sombras del lomo */}
+                    <div className="back bg-white" style={{ fontFamily: font }}>
                         <div className="absolute top-0 right-0 h-full w-4 bg-gradient-to-l from-black/5 to-transparent z-10 pointer-events-none hidden md:block"></div>
                         <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-b from-black/5 to-transparent z-10 pointer-events-none md:hidden"></div>
+                        <div className="p-2 md:p-8 h-full flex flex-col overflow-hidden">
+                            {backItem ? <ItemContent item={backItem} settings={settings} onOpenMedia={setSelectedMediaItem} /> : <EndCover />}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
 
-                        <div className="h-full flex flex-col p-3 md:p-8">
-                            {backFace.type === 'item' && <ItemContent item={backFace.data} settings={settings} onOpenMedia={setSelectedMediaItem} />}
-                            {backFace.type === 'end_cover' && <EndCover />}
-                            {backFace.type === 'empty_back' && (
-                                <div className="flex flex-col items-center justify-center h-full text-center">
-                                    <h2 className="text-2xl md:text-4xl font-black uppercase tracking-widest">FIN</h2>
-                                    <p className="mt-4 text-xs opacity-50 uppercase tracking-widest">Deslizá para volver</p>
-                                </div>
-                            )}
+        if (items.length % 2 !== 0) {
+            pages.push(
+                <div className="paper" key={`p_end`}>
+                    <div className="front bg-white" style={{ fontFamily: font }}>
+                        <div className="absolute top-0 left-0 h-full w-4 bg-gradient-to-r from-black/5 to-transparent z-10 pointer-events-none hidden md:block"></div>
+                        <div className="absolute bottom-0 left-0 w-full h-4 bg-gradient-to-t from-black/5 to-transparent z-10 pointer-events-none md:hidden"></div>
+                        <div className="p-2 md:p-8 h-full flex flex-col overflow-hidden">
+                            <EndCover />
+                        </div>
+                    </div>
+                    <div className="back" style={{ backgroundColor: coverBg, color: '#fff', fontFamily: font }}>
+                        <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+                            <h2 className="text-2xl md:text-4xl font-black uppercase tracking-widest">FIN</h2>
+                            <p className="mt-4 text-xs opacity-50 uppercase tracking-widest">Deslizá para volver</p>
                         </div>
                     </div>
                 </div>
@@ -342,21 +354,20 @@ function RevistaPublicaContent() {
                 __html: `
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;800;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Space+Grotesk:wght@400;700;900&display=swap');
                 
-                /* FIX DESCENTRADO TOTAL: El body flex bloquea el movimiento horizontal */
-                html, body { margin: 0; padding: 0; width: 100vw; height: 100dvh; overflow: hidden !important; background-color: #e2e8f0; display: flex; justify-content: center; align-items: center; }
+                /* FIX DESCENTRADO TOTAL */
+                html, body { margin: 0; padding: 0; width: 100vw; height: 100dvh; overflow: hidden !important; background-color: #e2e8f0; }
                 
                 .nav-btn { position: absolute; background-color: #fff; color: #000; border: 2px solid #000; width: 60px; height: 60px; font-size: 24px; border-radius: 50%; cursor: pointer; transition: all 0.3s ease; display: flex; justify-content: center; align-items: center; z-index: 90; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
                 .nav-btn.prev-btn { left: 30px; top: 50%; transform: translateY(-50%); }
                 .nav-btn.next-btn { right: 30px; top: 50%; transform: translateY(-50%); }
                 
                 @media (max-width: 768px) {
-                    .nav-btn { width: 50px; height: 50px; font-size: 20px; }
-                    /* FIX FLECHAS MÓVIL: Arriba y abajo exacto */
-                    .nav-btn.prev-btn { left: 50%; top: 15px; transform: translateX(-50%); }
-                    .nav-btn.next-btn { left: 50%; bottom: 15px; right: auto; top: auto; transform: translateX(-50%); }
+                    .nav-btn { width: 45px; height: 45px; font-size: 18px; }
+                    /* SOLUCIÓN FLECHAS CELULAR: Arriba y Abajo */
+                    .nav-btn.prev-btn { left: 50%; top: 15px; transform: translateX(-50%); margin-top: 0; }
+                    .nav-btn.next-btn { left: 50%; bottom: 15px; right: auto; top: auto; transform: translateX(-50%); margin-top: 0; }
                 }
 
-                #book-wrapper { position: relative; width: 88vw; max-width: 1200px; height: 85vh; max-height: 800px; perspective: 3500px; }
                 .paper { position: absolute; width: 50%; height: 100%; top: 0; right: 0; transform-style: preserve-3d; transform-origin: left center; transition: transform 0.8s cubic-bezier(0.3, 0.0, 0.2, 1); cursor: grab; transform: rotateY(0deg); will-change: transform; }
                 .paper:active { cursor: grabbing; }
                 .front, .back { position: absolute; width: 100%; height: 100%; top: 0; left: 0; backface-visibility: hidden; background-color: #fff; overflow: hidden; display: flex; flex-direction: column; }
@@ -365,7 +376,6 @@ function RevistaPublicaContent() {
                 .back { transform: rotateY(180deg) translateZ(1px); border-radius: 20px 0 0 20px; box-shadow: inset -4px 0 15px rgba(0,0,0,0.05), -10px 15px 40px rgba(0,0,0,0.2); }
                 
                 @media (max-width: 768px) {
-                    #book-wrapper { height: 75dvh; }
                     .paper { width: 100% !important; height: 50% !important; top: 50% !important; left: 0 !important; transform-origin: top center; transform: rotateX(0deg); }
                     .front { transform: rotateX(0deg) translateZ(1px); border-radius: 0 0 16px 16px; box-shadow: inset 0 4px 15px rgba(0,0,0,0.05), 0 15px 30px rgba(0,0,0,0.15); }
                     .back { transform: rotateX(180deg) translateZ(1px); border-radius: 16px 16px 0 0; box-shadow: inset 0 -4px 15px rgba(0,0,0,0.05), 0 -15px 30px rgba(0,0,0,0.15); }
@@ -375,13 +385,6 @@ function RevistaPublicaContent() {
                 .tech-specs-overlay { -ms-overflow-style: none; scrollbar-width: none; }
             `}} />
 
-            {/* BOTÓN VOLVER FLOTANTE AFUERA DEL LIBRO */}
-            {collectionId && (
-                <Link href={`/c/${collectionId}`} className="fixed top-4 left-4 z-[99999] flex items-center gap-2 px-4 py-2.5 bg-slate-900/50 hover:bg-slate-900/80 backdrop-blur-md text-white rounded-full text-xs font-bold transition-colors shadow-lg">
-                    <ArrowLeft size={16} /> Volver a la Colección
-                </Link>
-            )}
-
             <button className="nav-btn prev-btn" id="prev-btn" disabled>
                 <span className="hidden md:inline">◀</span><span className="inline md:hidden">▲</span>
             </button>
@@ -389,7 +392,8 @@ function RevistaPublicaContent() {
                 <span className="hidden md:inline">▶</span><span className="inline md:hidden">▼</span>
             </button>
 
-            <div id="book-wrapper">
+            {/* CONTENEDOR FIJO Y CENTRADO */}
+            <div id="book-wrapper" className="fixed top-1/2 left-1/2 w-[88vw] max-w-[1200px] h-[85vh] max-h-[800px] md:h-[85vh] max-md:h-[70dvh] z-20" style={{ perspective: '3500px', transform: 'translate(-50%, -50%)' }}>
                 <div id="book" className="absolute w-full h-full top-0 left-0" style={{ transformStyle: 'preserve-3d' }}>
                     {renderPages()}
                 </div>
@@ -425,6 +429,7 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
     }
 
     const principalImage = imgUrls.length > 0 ? convertirUrlDrive(imgUrls[0]) : 'https://placehold.co/600x800?text=No+Image';
+    const hasMultipleMedia = imgUrls.length > 1 || !!item.video_url;
 
     const waLink = settings?.whatsapp_number
         ? `https://wa.me/${settings.whatsapp_number}?text=${encodeURIComponent(`Hola! Quería consultar por: ${item.name}${item.sku ? ` (${item.sku})` : ''}`)}`
@@ -432,9 +437,7 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
     const igLink = settings?.instagram_url || '#';
 
     return (
-        // FIX AMONTONAMIENTO: Cero Scroll. El Flexbox adapta todo automáticamente.
-        <div className="flex flex-col h-full w-full bg-white overflow-hidden p-1 md:p-0">
-
+        <div className="flex flex-col h-full w-full overflow-hidden bg-white">
             {item.technical_specs?.length > 0 && (
                 <button className="absolute top-2 right-2 md:top-4 md:right-4 z-30 p-2 bg-slate-900/10 hover:bg-slate-900/20 rounded-full transition-colors text-slate-700 back-to-collection" onClick={(e) => { e.stopPropagation(); setShowSpecs(!showSpecs); }}>
                     <Info size={16} className="md:size-[20px]" />
@@ -458,43 +461,45 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
                 </div>
             )}
 
-            {/* IMAGEN: Exactamente 45% en cel, 50% en PC. SIN TEXTOS ENCIMA */}
+            {/* FIX AMONTONAMIENTO: Imagen ocupa 45% estricto */}
             <div
                 className="h-[45%] md:h-[50%] w-full rounded-xl md:rounded-2xl overflow-hidden bg-slate-50 flex items-center justify-center cursor-pointer relative group clickable-media border border-slate-100 shrink-0"
                 onClick={(e) => { e.stopPropagation(); onOpenMedia(item); }}
             >
                 <img src={principalImage} className="w-full h-full object-contain pointer-events-none transition-transform group-hover:scale-105" onError={(e) => { (e.target as any).src = 'https://placehold.co/600x800?text=Error'; }} />
+                {hasMultipleMedia && (
+                    <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[9px] md:text-xs px-2.5 py-1 md:px-3 md:py-1.5 rounded-full font-bold backdrop-blur-sm pointer-events-none">
+                        Ver galería
+                    </div>
+                )}
             </div>
 
-            {/* DATOS: El resto del espacio. Textos proporcionados para celular. */}
-            <div className="flex-1 flex flex-col justify-between overflow-hidden pt-3 md:pt-5">
+            {/* FIX AMONTONAMIENTO: Textos pequeños en celular, flex adaptado sin scroll */}
+            <div className="flex-1 flex flex-col justify-between overflow-hidden px-1 pt-2 md:pt-4 pb-1">
 
-                {/* Cabecera info */}
-                <div className="shrink-0 mb-1 overflow-hidden">
-                    {item.sku && <span className="text-[10px] md:text-sm font-black text-slate-400 mb-0.5 md:mb-1 block uppercase tracking-widest font-mono truncate">{item.sku}</span>}
-                    <h3 className="text-xl md:text-3xl lg:text-4xl font-black text-slate-950 leading-tight mb-0.5 md:mb-2 line-clamp-2">{item.name}</h3>
-                    {item.price && <div className="text-2xl md:text-4xl lg:text-5xl font-black text-emerald-600 mt-1">${Number(item.price).toLocaleString('es-AR')}</div>}
+                <div className="shrink-0 mb-1">
+                    {item.sku && <span className="text-[9px] md:text-sm font-black text-slate-400 mb-0 block uppercase tracking-widest font-mono truncate">{item.sku}</span>}
+                    <h3 className="text-sm md:text-3xl lg:text-4xl font-black text-slate-950 leading-tight mb-0.5 line-clamp-2">{item.name}</h3>
+                    {item.price && <div className="text-lg md:text-4xl lg:text-5xl font-black text-emerald-600 mt-0.5">${Number(item.price).toLocaleString('es-AR')}</div>}
                 </div>
 
-                {/* Variantes: min-h-0 vital para que no desborde hacia abajo */}
-                <div className="flex-1 min-h-0 flex flex-col justify-center overflow-hidden py-1">
-                    {item.variants && (
-                        <div className="flex flex-wrap content-start gap-1.5 md:gap-2">
+                {item.variants && (
+                    <div className="flex-1 min-h-0 flex flex-col justify-start overflow-hidden">
+                        <div className="flex flex-wrap content-start gap-1 md:gap-2 my-0.5 md:my-2">
                             {item.variants.split('|').map((v: string, i: number) => (
-                                <span key={i} className="px-2 py-0.5 md:px-3 md:py-1.5 border-2 border-slate-200 rounded-md md:rounded-xl text-[10px] md:text-sm font-black text-slate-700 bg-white whitespace-nowrap">{v.trim()}</span>
+                                <span key={i} className="px-1.5 py-0.5 md:px-3 md:py-1.5 border-2 border-slate-200 rounded-md md:rounded-xl text-[8px] md:text-sm font-black text-slate-700 bg-white whitespace-nowrap">{v.trim()}</span>
                             ))}
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
 
-                {/* Botones: Siempre abajo, protegidos */}
-                <div className="shrink-0 flex gap-2 mt-auto pt-2 border-t border-slate-100">
-                    <a href={waLink} target="_blank" className="flex-1 flex items-center justify-center gap-1.5 md:gap-2 px-2 md:px-4 py-2.5 md:py-3.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg md:rounded-xl text-[10px] md:text-sm font-black hover:bg-emerald-100 transition-colors uppercase tracking-wider whitespace-nowrap clickable-media" onClick={(e) => e.stopPropagation()}>
-                        <MessageSquareText size={16} className="md:size-5" /> Consultar
+                <div className="shrink-0 flex gap-2 mt-auto pt-1.5 md:pt-4 border-t border-slate-100">
+                    <a href={waLink} target="_blank" className="flex-1 flex items-center justify-center gap-1.5 md:gap-2 px-2 md:px-4 py-1.5 md:py-3.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg md:rounded-xl text-[9px] md:text-sm font-black hover:bg-emerald-100 transition-colors uppercase tracking-wider whitespace-nowrap clickable-media" onClick={(e) => e.stopPropagation()}>
+                        <MessageSquareText size={14} className="md:size-5" /> Consultar
                     </a>
                     {igLink !== '#' && (
-                        <a href={igLink} target="_blank" className="flex-1 flex items-center justify-center gap-1.5 md:gap-2 px-2 md:px-4 py-2.5 md:py-3.5 bg-white border-2 border-slate-200 text-slate-700 rounded-lg md:rounded-xl text-[10px] md:text-sm font-black hover:border-slate-900 hover:text-slate-900 transition-colors uppercase tracking-wider whitespace-nowrap clickable-media" onClick={(e) => e.stopPropagation()}>
-                            <InstagramIcon size={16} /> Instagram
+                        <a href={igLink} target="_blank" className="flex-1 flex items-center justify-center gap-1.5 md:gap-2 px-2 md:px-4 py-1.5 md:py-3.5 bg-white border-2 border-slate-200 text-slate-700 rounded-lg md:rounded-xl text-[9px] md:text-sm font-black hover:border-slate-900 hover:text-slate-900 transition-colors uppercase tracking-wider whitespace-nowrap clickable-media" onClick={(e) => e.stopPropagation()}>
+                            <InstagramIcon size={14} /> Instagram
                         </a>
                     )}
                 </div>
@@ -517,7 +522,6 @@ function MediaCarouselModal({ item, onClose }: { item: any, onClose: () => void 
         if (item.image_url) imgUrls = [item.image_url];
     }
 
-    // EL VIDEO AL FINAL
     const mediaSources = [
         ...imgUrls.map((url: string) => ({ type: 'image', url: convertirUrlDrive(url) })),
     ];
@@ -550,13 +554,10 @@ function MediaCarouselModal({ item, onClose }: { item: any, onClose: () => void 
         <div className="fixed inset-0 z-[999999] bg-black/95 backdrop-blur-md flex items-center justify-center select-none" onClick={(e) => { e.stopPropagation(); onClose(); }}>
             <button className="absolute top-6 right-6 z-50 p-3 bg-white/10 text-white rounded-full hover:bg-white/20 transition-colors" onClick={(e) => { e.stopPropagation(); onClose(); }}><X size={24} /></button>
 
-            <div className="relative w-full h-full flex items-center justify-center group" onClick={(e) => e.stopPropagation()}>
+            <div className="relative w-full h-full flex items-center justify-center p-4 md:p-12" onClick={(e) => e.stopPropagation()}>
 
-                {/* FIX TAMAÑO IMAGEN PC: Ocupan todo lo ancho y alto disponible, sin recortarse chiquitas */}
                 {currentMedia.type === 'image' && (
-                    <div className="w-full h-full flex items-center justify-center p-4 md:p-12">
-                        <img src={currentMedia.url} className="max-w-full max-h-[85vh] w-auto h-auto object-contain rounded-xl shadow-2xl" />
-                    </div>
+                    <img src={currentMedia.url} className="max-w-[90vw] max-h-[85vh] object-contain rounded-xl shadow-2xl" />
                 )}
 
                 {currentMedia.type === 'video' && (
@@ -577,7 +578,6 @@ function MediaCarouselModal({ item, onClose }: { item: any, onClose: () => void 
                     </div>
                 )}
 
-                {/* FIX FLECHAS: Están pegadas a los costados de la PANTALLA, no invaden la foto */}
                 {mediaSources.length > 1 && (
                     <>
                         <button className="absolute left-2 md:left-8 top-1/2 -translate-y-1/2 z-50 p-3 md:p-4 text-white/50 hover:text-white bg-black/20 hover:bg-black/50 rounded-full backdrop-blur-sm transition-all" onClick={prev}><ChevronLeft size={32} /></button>
