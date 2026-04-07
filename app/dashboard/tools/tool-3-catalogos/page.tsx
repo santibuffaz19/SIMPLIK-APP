@@ -13,7 +13,6 @@ export default function CatalogosDashboard() {
     const [copiedId, setCopiedId] = useState<string | null>(null);
 
     useEffect(() => {
-        // Leemos si la URL tiene un parámetro (ej: ?tab=colecciones)
         const params = new URLSearchParams(window.location.search);
         if (params.get('tab') === 'colecciones') setActiveTab('colecciones');
         cargarDatos();
@@ -106,7 +105,7 @@ export default function CatalogosDashboard() {
                                                 <Link href={`/dashboard/tools/tool-3-catalogos/editar/${cat.id}`} className="p-2 text-slate-400 hover:text-violet-600 bg-slate-50 rounded-lg transition-colors"><Edit3 size={16} /></Link>
                                             </div>
                                             <a href={`/r/${cat.id}`} target="_blank" className="flex items-center gap-1.5 text-xs font-bold text-violet-600 bg-violet-50 px-3 py-2 rounded-lg hover:bg-violet-100 transition-colors">
-                                                Ver Revista <ExternalLink size={14} />
+                                                Abrir <ExternalLink size={14} />
                                             </a>
                                         </div>
                                     </div>

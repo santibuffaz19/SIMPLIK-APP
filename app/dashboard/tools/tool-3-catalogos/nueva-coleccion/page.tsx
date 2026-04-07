@@ -107,7 +107,7 @@ export default function NuevaColeccion() {
                 <div className="lg:col-span-1">
                     <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 text-slate-300 space-y-4 sticky top-6">
                         <h3 className="font-bold text-lg text-white">¿Qué es una colección?</h3>
-                        <p className="text-sm leading-relaxed">Es un link único que agrupa varias de tus revistas 3D. Ideal para enviarle a un cliente todo el catálogo de una temporada o categorías específicas.</p>
+                        <p className="text-sm leading-relaxed">Es un link único que agrupa varias de tus revistas 3D. Ideal para enviarle a un cliente todo el catálogo ordenado.</p>
 
                         <button onClick={handleGuardar} disabled={saving} className="w-full mt-4 bg-violet-600 hover:bg-violet-700 text-white py-4 rounded-xl font-black flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-violet-900/50">
                             {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />} CREAR LINK PÚBLICO
