@@ -3,19 +3,33 @@
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Loader2, MessageSquareText, Info, X, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Loader2, MessageSquareText, Info, X, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
-// Ya no usamos convertirUrlDrive porque las imágenes ahora se suben a tu servidor.
 const extraerIdYoutube = (url: string) => {
     if (!url) return null;
     const match = url.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/watch\?.+&v=))([\w-]{11})/);
     return (match && match[1]) ? match[1] : null;
 };
 
-const InstagramIcon = ({ size = 14 }: { size?: number }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" x2="17.51" y1="6.5" y2="6.5" /></svg>
-);
+// Convierte cualquier link de Google Drive en URL directa de imagen
+const convertirUrlDrive = (url: string): string => {
+    if (!url) return url;
+    // Formato: /file/d/FILE_ID/view o /open?id=FILE_ID
+    const matchFile = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    const matchOpen = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    const fileId = matchFile?.[1] || matchOpen?.[1];
+    if (fileId) {
+        return `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+    }
+    return url;
+};
+
+// Detecta si una URL es de Google Drive
+const esDrive = (url: string): boolean => {
+    if (!url) return false;
+    return url.includes('drive.google.com');
+};
 
 function RevistaPublicaContent() {
     const { id } = useParams();
@@ -37,6 +51,12 @@ function RevistaPublicaContent() {
         }
         fetchCatalogo();
     }, [id]);
+
+    const selectedMediaRef = useRef<any>(null);
+
+    useEffect(() => {
+        selectedMediaRef.current = selectedMediaItem;
+    }, [selectedMediaItem]);
 
     useEffect(() => {
         if (!catalogo || loading) return;
@@ -134,7 +154,7 @@ function RevistaPublicaContent() {
         prevBtn.onclick = goPrevPage;
 
         function startDrag(e: any) {
-            if (selectedMediaItem) return;
+            if (selectedMediaRef.current) return;
 
             let isClickable = false;
             let tempTarget = e.target;
@@ -178,7 +198,7 @@ function RevistaPublicaContent() {
         }
 
         function drag(e: any) {
-            if (!isDragging || !currentPaper || selectedMediaItem) return;
+            if (!isDragging || !currentPaper || selectedMediaRef.current) return;
             const clientX = e.type.indexOf('touch') !== -1 ? e.touches[0].clientX : e.clientX;
             const clientY = e.type.indexOf('touch') !== -1 ? e.touches[0].clientY : e.clientY;
 
@@ -203,7 +223,7 @@ function RevistaPublicaContent() {
         }
 
         function endDrag() {
-            if (!isDragging || !currentPaper || selectedMediaItem) return;
+            if (!isDragging || !currentPaper || selectedMediaRef.current) return;
             isDragging = false;
             currentPaper.style.transition = "transform 0.8s cubic-bezier(0.3, 0.0, 0.2, 1)";
             bookShifter!.style.transition = "transform 0.8s cubic-bezier(0.3, 0.0, 0.2, 1)";
@@ -260,7 +280,8 @@ function RevistaPublicaContent() {
             document.removeEventListener("touchend", endDrag);
             window.removeEventListener('resize', handleResize);
         };
-    }, [catalogo, loading, selectedMediaItem]);
+        // IMPORTANTE: selectedMediaItem NO va en deps para evitar que el libro se reinicie al abrir/cerrar carrusel
+    }, [catalogo, loading]);
 
     if (loading) return <div className="flex h-[100dvh] w-full items-center justify-center bg-slate-200"><Loader2 className="animate-spin text-slate-800" size={40} /></div>;
     if (!catalogo) return <div className="flex h-[100dvh] w-full items-center justify-center bg-slate-200 text-xl font-black">Revista no encontrada</div>;
@@ -373,10 +394,16 @@ function RevistaPublicaContent() {
                 .tech-specs-overlay { -ms-overflow-style: none; scrollbar-width: none; }
             `}} />
 
-            {/* BOTÓN VOLVER INDEPENDIENTE Y FLOTANTE */}
+            {/* BOTÓN VOLVER - Minimalista, fuera del libro, arriba a la izquierda */}
             {collectionId && (
-                <Link href={`/c/${collectionId}`} className="fixed top-5 left-5 z-[99999] w-12 h-12 bg-slate-900/40 hover:bg-slate-900/80 backdrop-blur-md text-white rounded-full flex items-center justify-center transition-colors shadow-lg" title="Volver a la Colección">
-                    <ArrowLeft size={22} />
+                <Link
+                    href={`/c/${collectionId}`}
+                    className="fixed top-5 left-5 z-[99999] w-10 h-10 bg-white/15 hover:bg-white/30 backdrop-blur-md text-white rounded-full flex items-center justify-center transition-all shadow-lg border border-white/20 hover:scale-110"
+                    title="Volver a la Colección"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 12H5M12 5l-7 7 7 7" />
+                    </svg>
                 </Link>
             )}
 
@@ -425,6 +452,9 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
         if (item.image_url) imgUrls = [item.image_url];
     }
 
+    // Convertir URLs de Drive a URLs de imagen directa
+    imgUrls = imgUrls.map(convertirUrlDrive);
+
     const principalImage = imgUrls.length > 0 ? imgUrls[0] : 'https://placehold.co/600x800?text=No+Image';
     const hasMultipleMedia = imgUrls.length > 1 || !!item.video_url;
 
@@ -434,23 +464,22 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
     const igLink = settings?.instagram_url || '#';
 
     return (
-        // LAYOUT CERO SCROLL Y LIMPIO PARA CELULAR
-        <div className="flex flex-col h-full w-full overflow-hidden bg-white p-1 md:p-0">
+        <div className="flex flex-col h-full w-full overflow-hidden bg-white">
             {item.technical_specs?.length > 0 && (
-                <button className="absolute top-2 right-2 md:top-4 md:right-4 z-30 p-1.5 md:p-2 bg-slate-900/10 hover:bg-slate-900/20 rounded-full transition-colors text-slate-700" onClick={(e) => { e.stopPropagation(); setShowSpecs(!showSpecs); }}>
-                    <Info size={16} className="md:size-[20px]" />
+                <button className="absolute top-2 right-2 md:top-3 md:right-3 z-30 p-1.5 bg-slate-900/10 hover:bg-slate-900/20 rounded-full transition-colors text-slate-700" onClick={(e) => { e.stopPropagation(); setShowSpecs(!showSpecs); }}>
+                    <Info size={14} className="md:size-[16px]" />
                 </button>
             )}
 
             {showSpecs && (
-                <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-40 p-4 md:p-6 rounded-2xl border border-slate-100 flex flex-col" onClick={(e) => e.stopPropagation()}>
+                <div className="absolute inset-0 bg-white/97 backdrop-blur-sm z-40 p-3 md:p-5 rounded-2xl flex flex-col" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2 shrink-0">
-                        <h4 className="font-black text-xs md:text-sm uppercase text-slate-500 tracking-wider">Ficha Técnica</h4>
-                        <button onClick={() => setShowSpecs(false)} className="p-1.5 bg-slate-100 rounded-full text-slate-500 hover:bg-red-50 hover:text-red-500"><X size={16} /></button>
+                        <h4 className="font-black text-[10px] md:text-xs uppercase text-slate-500 tracking-wider">Ficha Técnica</h4>
+                        <button onClick={() => setShowSpecs(false)} className="p-1 bg-slate-100 rounded-full text-slate-500 hover:bg-red-50 hover:text-red-500"><X size={14} /></button>
                     </div>
-                    <div className="space-y-2 text-[10px] md:text-sm overflow-y-auto">
+                    <div className="space-y-1.5 text-[9px] md:text-xs overflow-y-auto tech-specs-overlay">
                         {item.technical_specs.map((spec: any, idx: number) => (
-                            <div key={idx} className="flex justify-between items-center gap-3 bg-slate-50 p-2 md:p-3 rounded-lg">
+                            <div key={idx} className="flex justify-between items-center gap-2 bg-slate-50 p-2 rounded-lg">
                                 <span className="font-bold text-slate-500 uppercase">{spec.clave}</span>
                                 <span className="font-bold text-slate-800 text-right">{spec.valor}</span>
                             </div>
@@ -459,45 +488,73 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
                 </div>
             )}
 
-            {/* IMAGEN: 45% en cel, 60% en PC para que se luzca */}
+            {/* IMAGEN: tamaño fijo para dejar espacio al contenido abajo */}
             <div
-                className="h-[45%] md:h-[60%] w-full rounded-lg md:rounded-2xl overflow-hidden bg-slate-50 flex items-center justify-center cursor-pointer relative group clickable-media border border-slate-100 shrink-0"
+                className="w-full rounded-lg md:rounded-xl overflow-hidden bg-slate-50 flex items-center justify-center cursor-pointer relative group clickable-media border border-slate-100 shrink-0"
+                style={{ height: '48%' }}
                 onClick={(e) => { e.stopPropagation(); onOpenMedia(item); }}
             >
-                <img src={principalImage} className="w-full h-full object-contain pointer-events-none transition-transform group-hover:scale-105" onError={(e) => { (e.target as any).src = 'https://placehold.co/600x800?text=Error'; }} />
+                <img
+                    src={principalImage}
+                    className="w-full h-full object-contain pointer-events-none transition-transform group-hover:scale-105"
+                    onError={(e) => { (e.target as any).src = 'https://placehold.co/600x800?text=Error'; }}
+                />
                 {hasMultipleMedia && (
-                    <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[9px] md:text-xs px-2.5 py-1 md:px-3 md:py-1.5 rounded-full font-bold backdrop-blur-sm pointer-events-none">
-                        Ver galería
+                    <div className="absolute bottom-1.5 right-1.5 bg-black/75 text-white text-[8px] md:text-[10px] px-2 py-0.5 rounded-full font-bold pointer-events-none">
+                        +media
                     </div>
                 )}
             </div>
 
-            {/* TEXTOS: Ajustados para no amontonarse en celular */}
-            <div className="flex-1 flex flex-col justify-between overflow-hidden px-1 pt-2 md:pt-4 pb-1 md:pb-0">
+            {/* CONTENIDO: todo encajado, sin scroll */}
+            <div className="flex-1 flex flex-col justify-between overflow-hidden px-1 pt-1.5 md:pt-2 pb-0.5">
 
-                <div className="shrink-0 mb-1 overflow-hidden">
-                    {item.sku && <span className="text-[9px] md:text-sm font-black text-slate-400 mb-0.5 block uppercase tracking-widest font-mono truncate">{item.sku}</span>}
-                    <h3 className="text-base md:text-2xl lg:text-3xl font-black text-slate-950 leading-tight mb-0.5 line-clamp-2">{item.name}</h3>
-                    {item.price && <div className="text-lg md:text-3xl lg:text-4xl font-black text-emerald-600 mt-0.5">${Number(item.price).toLocaleString('es-AR')}</div>}
-                </div>
-
-                <div className="flex-1 min-h-0 flex flex-col justify-start overflow-hidden">
-                    {item.variants && (
-                        <div className="flex flex-wrap content-start gap-1 md:gap-2 my-1 md:my-2">
-                            {item.variants.split('|').map((v: string, i: number) => (
-                                <span key={i} className="px-1.5 py-0.5 md:px-3 md:py-1.5 border border-slate-200 md:border-2 rounded-md md:rounded-xl text-[9px] md:text-sm font-bold md:font-black text-slate-700 bg-white whitespace-nowrap">{v.trim()}</span>
-                            ))}
+                {/* Nombre, SKU, Precio */}
+                <div className="shrink-0 overflow-hidden">
+                    {item.sku && (
+                        <span className="text-[8px] md:text-[10px] font-black text-slate-400 block uppercase tracking-widest font-mono truncate leading-tight">
+                            {item.sku}
+                        </span>
+                    )}
+                    <h3 className="text-sm md:text-xl lg:text-2xl font-black text-slate-950 leading-tight line-clamp-2">{item.name}</h3>
+                    {item.price && (
+                        <div className="text-base md:text-2xl lg:text-3xl font-black text-emerald-600 leading-tight">
+                            ${Number(item.price).toLocaleString('es-AR')}
                         </div>
                     )}
                 </div>
 
-                <div className="shrink-0 flex gap-1.5 md:gap-2 mt-auto pt-2 md:pt-4 border-t border-slate-100">
-                    <a href={waLink} target="_blank" className="flex-1 flex items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-3.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg md:rounded-xl text-[9px] md:text-sm font-black hover:bg-emerald-100 transition-colors uppercase tracking-wider whitespace-nowrap clickable-media" onClick={(e) => e.stopPropagation()}>
-                        <MessageSquareText size={14} className="md:size-5" /> Consultar
+                {/* Variantes */}
+                {item.variants && (
+                    <div className="flex flex-wrap content-start gap-0.5 md:gap-1.5 my-0.5 md:my-1 overflow-hidden shrink-0" style={{ maxHeight: '30%' }}>
+                        {item.variants.split('|').slice(0, 8).map((v: string, i: number) => (
+                            <span key={i} className="px-1.5 py-0.5 border border-slate-200 rounded text-[8px] md:text-xs font-bold text-slate-700 bg-white whitespace-nowrap">
+                                {v.trim()}
+                            </span>
+                        ))}
+                    </div>
+                )}
+
+                {/* Botones minimalistas */}
+                <div className="shrink-0 flex gap-1 mt-auto pt-1 md:pt-2 border-t border-slate-100">
+                    <a
+                        href={waLink}
+                        target="_blank"
+                        className="flex-1 flex items-center justify-center gap-1 py-1.5 md:py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-[8px] md:text-xs font-black hover:bg-emerald-100 transition-colors uppercase tracking-wide whitespace-nowrap clickable-media"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <MessageSquareText size={11} className="md:size-[14px]" />
+                        <span>Consultar</span>
                     </a>
                     {igLink !== '#' && (
-                        <a href={igLink} target="_blank" className="flex-1 flex items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-3.5 bg-white border border-slate-200 md:border-2 text-slate-700 rounded-lg md:rounded-xl text-[9px] md:text-sm font-black hover:border-slate-900 hover:text-slate-900 transition-colors uppercase tracking-wider whitespace-nowrap clickable-media" onClick={(e) => e.stopPropagation()}>
-                            <InstagramIcon size={14} /> Instagram
+                        <a
+                            href={igLink}
+                            target="_blank"
+                            className="flex-1 flex items-center justify-center gap-1 py-1.5 md:py-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[8px] md:text-xs font-black hover:border-slate-900 hover:text-slate-900 transition-colors uppercase tracking-wide whitespace-nowrap clickable-media"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" className="md:w-[14px] md:h-[14px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" x2="17.51" y1="6.5" y2="6.5" /></svg>
+                            <span>Instagram</span>
                         </a>
                     )}
                 </div>
@@ -520,14 +577,23 @@ function MediaCarouselModal({ item, onClose }: { item: any, onClose: () => void 
         if (item.image_url) imgUrls = [item.image_url];
     }
 
-    const mediaSources = [
-        ...imgUrls.map((url: string) => ({ type: 'image', url })),
+    // Construimos los sources, manejando Drive, YouTube y video directo
+    const mediaSources: { type: string; url: string; originalUrl?: string }[] = [
+        ...imgUrls.map((url: string) => {
+            if (esDrive(url)) {
+                return { type: 'drive-image', url: convertirUrlDrive(url), originalUrl: url };
+            }
+            return { type: 'image', url };
+        }),
     ];
 
     if (item.video_url) {
         const youtubeId = extraerIdYoutube(item.video_url);
         if (youtubeId) {
-            mediaSources.push({ type: 'youtube', url: youtubeId });
+            mediaSources.push({ type: 'youtube', url: youtubeId, originalUrl: item.video_url });
+        } else if (esDrive(item.video_url)) {
+            // Video de Drive: lo mostramos como enlace externo ya que Drive no permite embed directo de video
+            mediaSources.push({ type: 'drive-link', url: item.video_url, originalUrl: item.video_url });
         } else {
             mediaSources.push({ type: 'video', url: item.video_url });
         }
@@ -549,13 +615,38 @@ function MediaCarouselModal({ item, onClose }: { item: any, onClose: () => void 
     const currentMedia = mediaSources[currentIndex];
 
     return (
-        <div className="fixed inset-0 z-[999999] bg-black/95 backdrop-blur-md flex items-center justify-center select-none" onClick={(e) => { e.stopPropagation(); onClose(); }}>
-            <button className="absolute top-6 right-6 z-50 p-3 bg-white/10 text-white rounded-full hover:bg-white/20 transition-colors" onClick={(e) => { e.stopPropagation(); onClose(); }}><X size={24} /></button>
+        <div
+            className="fixed inset-0 z-[999999] bg-black/95 backdrop-blur-md flex items-center justify-center select-none"
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+        >
+            <button
+                className="absolute top-5 right-5 z-50 p-2.5 bg-white/10 text-white rounded-full hover:bg-white/20 transition-colors"
+                onClick={(e) => { e.stopPropagation(); onClose(); }}
+            >
+                <X size={20} />
+            </button>
 
             <div className="relative w-full h-full flex items-center justify-center p-4 md:p-12" onClick={(e) => e.stopPropagation()}>
 
-                {currentMedia.type === 'image' && (
-                    <img src={currentMedia.url} className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl" />
+                {(currentMedia.type === 'image' || currentMedia.type === 'drive-image') && (
+                    <div className="relative flex flex-col items-center gap-3">
+                        <img
+                            src={currentMedia.url}
+                            className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl"
+                            onError={(e) => { (e.target as any).src = 'https://placehold.co/600x800?text=Error+cargando'; }}
+                        />
+                        {currentMedia.type === 'drive-image' && currentMedia.originalUrl && (
+                            <a
+                                href={currentMedia.originalUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-white/70 hover:text-white text-xs font-bold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full transition-all"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <ExternalLink size={14} /> Ver en Google Drive
+                            </a>
+                        )}
+                    </div>
                 )}
 
                 {currentMedia.type === 'video' && (
@@ -565,25 +656,73 @@ function MediaCarouselModal({ item, onClose }: { item: any, onClose: () => void 
                 )}
 
                 {currentMedia.type === 'youtube' && (
-                    <div className="relative w-[90vw] max-w-[1000px] aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
-                        <iframe
-                            src={`https://www.youtube.com/embed/${currentMedia.url}?autoplay=1&mute=0&loop=1&playlist=${currentMedia.url}`}
-                            className="absolute inset-0 w-full h-full"
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                        ></iframe>
+                    <div className="flex flex-col items-center gap-3 w-full">
+                        <div className="relative w-[90vw] max-w-[900px] aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
+                            <iframe
+                                src={`https://www.youtube.com/embed/${currentMedia.url}?autoplay=1&mute=0`}
+                                className="absolute inset-0 w-full h-full"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                            ></iframe>
+                        </div>
+                        {currentMedia.originalUrl && (
+                            <a
+                                href={currentMedia.originalUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-white/70 hover:text-white text-xs font-bold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full transition-all"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <ExternalLink size={14} /> Ver en YouTube
+                            </a>
+                        )}
+                    </div>
+                )}
+
+                {currentMedia.type === 'drive-link' && currentMedia.originalUrl && (
+                    <div className="flex flex-col items-center justify-center gap-6 text-white text-center p-8">
+                        <div className="w-20 h-20 bg-white/10 rounded-2xl flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 87.3 78" fill="white" opacity="0.8">
+                                <path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5z" />
+                                <path d="M43.65 25L29.9 0c-1.35.8-2.5 1.9-3.3 3.3L1.2 48.5c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" />
+                                <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75L86.1 57.5c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 11.5z" />
+                                <path d="M43.65 25L57.4 0H29.9z" />
+                                <path d="M59.8 53H27.5L13.75 76.8h59.8z" />
+                                <path d="M59.8 53l13.75-23.8c-.8-1.4-1.95-2.5-3.3-3.3L57.4 0 43.65 25 57.4 53z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="font-black text-lg mb-2">Video en Google Drive</p>
+                            <p className="text-white/60 text-sm mb-6">Google Drive no permite reproducción directa embebida.</p>
+                        </div>
+                        <a
+                            href={currentMedia.originalUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-white font-black bg-white/20 hover:bg-white/30 px-6 py-3 rounded-full transition-all text-sm"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <ExternalLink size={16} /> Abrir en Google Drive
+                        </a>
                     </div>
                 )}
 
                 {mediaSources.length > 1 && (
                     <>
-                        <button className="absolute left-2 md:left-8 top-1/2 -translate-y-1/2 z-50 p-3 md:p-4 text-white/50 hover:text-white bg-black/20 hover:bg-black/50 rounded-full backdrop-blur-sm transition-all" onClick={prev}><ChevronLeft size={32} /></button>
-                        <button className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 z-50 p-3 md:p-4 text-white/50 hover:text-white bg-black/20 hover:bg-black/50 rounded-full backdrop-blur-sm transition-all" onClick={next}><ChevronRight size={32} /></button>
-
-                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-black/50 backdrop-blur-sm rounded-full flex gap-1.5 z-50">
+                        <button className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-50 p-2.5 md:p-3 text-white/50 hover:text-white bg-black/20 hover:bg-black/50 rounded-full backdrop-blur-sm transition-all" onClick={prev}>
+                            <ChevronLeft size={28} />
+                        </button>
+                        <button className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-50 p-2.5 md:p-3 text-white/50 hover:text-white bg-black/20 hover:bg-black/50 rounded-full backdrop-blur-sm transition-all" onClick={next}>
+                            <ChevronRight size={28} />
+                        </button>
+                        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-black/50 backdrop-blur-sm rounded-full flex gap-1.5 z-50">
                             {mediaSources.map((_, idx) => (
-                                <div key={idx} className={`w-1.5 h-1.5 rounded-full transition-all ${idx === currentIndex ? 'bg-white w-3' : 'bg-white/30'}`}></div>
+                                <button
+                                    key={idx}
+                                    onClick={(e) => { e.stopPropagation(); setCurrentIndex(idx); }}
+                                    className={`h-1.5 rounded-full transition-all ${idx === currentIndex ? 'bg-white w-4' : 'bg-white/30 w-1.5'}`}
+                                />
                             ))}
                         </div>
                     </>
