@@ -9,13 +9,20 @@ import { supabase } from '@/lib/supabase';
 // IMPORTANTE: Ajustar esta ruta si tu uploadImageAction está en otra carpeta
 import { uploadImageAction } from '../../../tool-1-QR/actions';
 
+const convertirUrlDrive = (url: string) => {
+    if (!url || !url.includes('drive.google.com')) return url;
+    let fileId = '';
+    const match = url.match(/\/file\/d\/(.+?)\//) || url.match(/\?id=(.+?)(&|$)/);
+    if (match) fileId = match[1];
+    return fileId ? `https://drive.google.com/uc?id=${fileId}` : url;
+};
+
 export default function EditarRevista() {
     const router = useRouter();
     const { id } = useParams();
 
     const [loadingPage, setLoadingPage] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [loading, setLoading] = useState(false); // FIX: Faltaba esta variable que pedía Vercel
     const [productosDB, setProductosDB] = useState<any[]>([]);
 
     const [name, setName] = useState('');
@@ -95,7 +102,7 @@ export default function EditarRevista() {
 
     const agregarProductoManualYGuardarEnBD = async () => {
         if (manualImages.length === 0 || !manualName) return alert("Imagen y Nombre obligatorios");
-        setLoading(true);
+        setSaving(true);
 
         const finalSpecs = manualSpecs.filter(s => s.clave.trim() && s.valor.trim());
         const finalVariants = manualVariants.trim() ? [{ id: Date.now(), nombre: 'Variante', valores: manualVariants }] : [];
@@ -118,8 +125,15 @@ export default function EditarRevista() {
 
         setManualImages([]); setManualName(''); setManualSku(''); setManualPrice(''); setManualVariants(''); setManualVideo('');
         setManualSpecs([{ id: 1, clave: '', valor: '' }]);
-        setShowManualModal(false); setLoading(false);
+        setShowManualModal(false); setSaving(false);
     };
+
+    // ACÁ ESTÁN LAS TRES FUNCIONES QUE FALTABAN PARA LA FICHA TÉCNICA
+    const agregarSpecManual = () => setManualSpecs([...manualSpecs, { id: Date.now(), clave: '', valor: '' }]);
+    const actualizarSpecManual = (id: number, campo: 'clave' | 'valor', valor: string) => {
+        setManualSpecs(manualSpecs.map(s => s.id === id ? { ...s, [campo]: valor } : s));
+    };
+    const eliminarSpecManual = (id: number) => setManualSpecs(manualSpecs.filter(s => s.id !== id));
 
     const eliminarItem = (itemId: string) => setItems(items.filter(i => i.id !== itemId));
 
@@ -223,12 +237,12 @@ export default function EditarRevista() {
             {showDbModal && (
                 <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white rounded-[2rem] w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
                             <h3 className="font-black text-lg flex items-center gap-2"><Database className="text-indigo-500" /> Catálogo Web</h3>
                             <button onClick={() => setShowDbModal(false)} className="p-2 bg-white rounded-full hover:bg-red-50 hover:text-red-500 transition-colors"><X size={20} /></button>
                         </div>
                         <div className="p-6 overflow-y-auto flex-1 min-h-[200px]">
-                            {loading ? (
+                            {loadingPage ? (
                                 <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin text-indigo-500" size={32} /></div>
                             ) : productosDB.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-full text-slate-400">
@@ -238,7 +252,7 @@ export default function EditarRevista() {
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {productosDB.map(p => (
-                                        <div key={p.id} className="flex items-center gap-3 border border-slate-200 p-3 rounded-2xl hover:border-indigo-400 cursor-pointer bg-white" onClick={() => agregarProductoDb(p)}>
+                                        <div key={p.id} className="flex items-center gap-3 border border-slate-200 p-3 rounded-2xl hover:border-indigo-400 hover:shadow-md cursor-pointer transition-all bg-white" onClick={() => agregarProductoDb(p)}>
                                             <img src={p.image_urls?.[0] || 'https://placehold.co/100x100'} className="w-16 h-16 rounded-xl object-cover bg-slate-50" />
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-bold text-sm truncate">{p.name}</p>
@@ -328,8 +342,8 @@ export default function EditarRevista() {
                             </div>
                         </div>
                         <div className="p-6 border-t border-slate-100 bg-slate-50 shrink-0">
-                            <button onClick={agregarProductoManualYGuardarEnBD} disabled={loading || uploadingImage} className="w-full bg-emerald-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all text-lg">
-                                {loading ? <Loader2 size={24} className="animate-spin" /> : 'GUARDAR PRODUCTO Y AGREGAR'}
+                            <button onClick={agregarProductoManualYGuardarEnBD} disabled={saving || uploadingImage} className="w-full bg-emerald-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all text-lg">
+                                {saving ? <Loader2 size={24} className="animate-spin" /> : 'GUARDAR PRODUCTO Y AGREGAR'}
                             </button>
                         </div>
                     </div>
