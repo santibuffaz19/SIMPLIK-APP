@@ -31,11 +31,11 @@ export default function CrearRevista() {
     const [showDbModal, setShowDbModal] = useState(false);
     const [showManualModal, setShowManualModal] = useState(false);
 
-    // NUEVO: Array de imágenes de Drive, pero manteniendo todos tus estados.
     const [manualImages, setManualImages] = useState(['']);
     const [manualName, setManualName] = useState('');
     const [manualSku, setManualSku] = useState('');
     const [manualPrice, setManualPrice] = useState('');
+    const [manualVideo, setManualVideo] = useState(''); // Agregado campo para Video
     const [manualVariants, setManualVariants] = useState('');
     const [manualSpecs, setManualSpecs] = useState([{ id: 1, clave: '', valor: '' }]);
 
@@ -80,8 +80,9 @@ export default function CrearRevista() {
             sku: manualSku || null,
             price_installments: parseFloat(manualPrice) || 0,
             image_urls: convertedImages,
-            technical_specs: finalSpecs,
+            video_url: manualVideo || null,
             variants_config: finalVariants
+            // technical_specs no se manda a DB general por si la columna no existe, pero va a la revista
         }).select('*').single();
 
         if (error) {
@@ -90,10 +91,24 @@ export default function CrearRevista() {
             return;
         }
 
-        agregarProductoDb(newProd);
+        const itemRevista = {
+            type: 'db',
+            id: Date.now().toString(),
+            db_id: newProd.id,
+            name: newProd.name,
+            sku: newProd.sku,
+            price: newProd.price_installments,
+            image_url: convertedImages[0] || '',
+            image_urls: convertedImages,
+            video_url: manualVideo || '',
+            variants: manualVariants,
+            technical_specs: finalSpecs
+        };
+
+        setItems([...items, itemRevista]);
         setProductosDB([newProd, ...productosDB]);
 
-        setManualImages(['']); setManualName(''); setManualSku(''); setManualPrice(''); setManualVariants('');
+        setManualImages(['']); setManualName(''); setManualSku(''); setManualPrice(''); setManualVariants(''); setManualVideo('');
         setManualSpecs([{ id: 1, clave: '', valor: '' }]);
         setShowManualModal(false);
         setLoading(false);
@@ -111,7 +126,6 @@ export default function CrearRevista() {
         setSaving(false);
     };
 
-    // Funciones para manual
     const agregarSpecManual = () => setManualSpecs([...manualSpecs, { id: Date.now(), clave: '', valor: '' }]);
     const actualizarSpecManual = (id: number, campo: 'clave' | 'valor', valor: string) => {
         setManualSpecs(manualSpecs.map(s => s.id === id ? { ...s, [campo]: valor } : s));
@@ -211,7 +225,6 @@ export default function CrearRevista() {
                 </div>
             </div>
 
-            {/* MODAL DB (REPARADO) */}
             {showDbModal && (
                 <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white rounded-[2rem] w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
@@ -226,7 +239,6 @@ export default function CrearRevista() {
                                 <div className="flex flex-col items-center justify-center h-full text-slate-400">
                                     <Database size={48} className="mb-3 opacity-50" />
                                     <p className="font-bold">No hay productos en el Catálogo Web.</p>
-                                    <p className="text-sm mt-2">Podés usar la "Carga Manual (Drive)" para sumar artículos.</p>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -247,14 +259,13 @@ export default function CrearRevista() {
                 </div>
             )}
 
-            {/* MODAL MANUAL CON MULTIPLES LINKS Y TODAS LAS OPCIONES DE VUELTA */}
             {showManualModal && (
                 <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white rounded-[2rem] w-full max-w-4xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col">
                         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
                             <div>
-                                <h3 className="font-black text-xl flex items-center gap-2"><LinkIcon className="text-emerald-500" /> Carga Manual (Drive)</h3>
-                                <p className="text-xs text-slate-500 font-medium">Este producto se guardará permanentemente en tu Catálogo General.</p>
+                                <h3 className="font-black text-xl flex items-center gap-2"><LinkIcon className="text-emerald-500" /> Carga Manual (Drive/Links)</h3>
+                                <p className="text-xs text-slate-500 font-medium">Se guardará en tu catálogo de forma permanente.</p>
                             </div>
                             <button onClick={() => setShowManualModal(false)} className="p-2 bg-white rounded-full hover:bg-red-50 hover:text-red-500 transition-colors"><X size={20} /></button>
                         </div>
@@ -266,7 +277,6 @@ export default function CrearRevista() {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-                                {/* SECCIÓN FOTOS */}
                                 <div className="md:col-span-5 space-y-4">
                                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Imágenes ({manualImages.length})</label>
                                     <div className="space-y-3">
@@ -286,7 +296,6 @@ export default function CrearRevista() {
                                     )}
                                 </div>
 
-                                {/* SECCIÓN DATOS */}
                                 <div className="md:col-span-7 grid grid-cols-2 gap-5">
                                     <div className="col-span-2">
                                         <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Nombre del Artículo *</label>
@@ -304,10 +313,13 @@ export default function CrearRevista() {
                                         <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Variantes rápidas</label>
                                         <input type="text" value={manualVariants} onChange={e => setManualVariants(e.target.value)} placeholder="Ej: S | M | L | XL" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 text-sm" />
                                     </div>
+                                    <div className="col-span-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Video (Opcional - YouTube o Drive)</label>
+                                        <input type="url" value={manualVideo} onChange={e => setManualVideo(e.target.value)} placeholder="Ej: https://youtube.com/..." className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 text-sm" />
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* SECCIÓN FICHA TÉCNICA */}
                             <div className="border-t border-slate-100 pt-8">
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-4">Ficha Técnica ({manualSpecs.length})</label>
                                 <div className="space-y-3">
@@ -322,11 +334,9 @@ export default function CrearRevista() {
                                 </div>
                             </div>
                         </div>
-
-                        {/* Botón Guardar */}
                         <div className="p-6 border-t border-slate-100 bg-slate-50 shrink-0">
                             <button onClick={agregarProductoManualYGuardarEnBD} disabled={loading} className="w-full bg-emerald-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all text-lg">
-                                {loading ? <Loader2 size={24} className="animate-spin" /> : 'GUARDAR PRODUCTO Y AGREGAR A REVISTA'}
+                                {loading ? <Loader2 size={24} className="animate-spin" /> : 'GUARDAR PRODUCTO Y AGREGAR'}
                             </button>
                         </div>
                     </div>

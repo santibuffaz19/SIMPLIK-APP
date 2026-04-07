@@ -31,7 +31,7 @@ export async function guardarCatalogoAction(catalogo: any) {
     } catch (error: any) { return { success: false, error: error.message }; }
 }
 
-// 4. Eliminar Revista Y LIMPIAR COLECCIONES
+// 4. Eliminar Revista Y LIMPIAR COLECCIONES (CORREGIDO)
 export async function eliminarCatalogoAction(id: string) {
     try {
         // 1. Borramos la revista de la base de datos
@@ -85,7 +85,7 @@ export async function guardarConfiguracionCatalogosAction(config: any) {
 // 6. Obtener productos de la Base de Datos
 export async function obtenerProductosParaCatalogoAction() {
     try {
-        const { data, error } = await supabase.from('products').select('id, name, sku, price_installments, image_urls, variants_config, video_url, technical_specs');
+        const { data, error } = await supabase.from('products').select('*');
         if (error) throw new Error(error.message);
         return { success: true, data };
     } catch (error: any) { return { success: false, error: error.message }; }
