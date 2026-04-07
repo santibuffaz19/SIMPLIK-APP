@@ -81,7 +81,6 @@ function RevistaPublicaContent() {
                 shift = currentShift + (targetShift - currentShift) * progress;
             }
             const axis = isMobile() ? 'Y' : 'X';
-            // SOLUCIÓN DESCENTRADO: Fijamos el translate(-50%, -50%) matemáticamente siempre.
             bookWrapper!.style.transform = `translate(-50%, -50%) translate${axis}(${shift}%)`;
         }
 
@@ -437,9 +436,10 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
     const igLink = settings?.instagram_url || '#';
 
     return (
-        <div className="flex flex-col h-full w-full overflow-hidden bg-white">
+        // LAYOUT CERO SCROLL: Reducimos padding en móvil para maximizar espacio
+        <div className="flex flex-col h-full w-full overflow-hidden bg-white p-1 md:p-0">
             {item.technical_specs?.length > 0 && (
-                <button className="absolute top-2 right-2 md:top-4 md:right-4 z-30 p-2 bg-slate-900/10 hover:bg-slate-900/20 rounded-full transition-colors text-slate-700 back-to-collection" onClick={(e) => { e.stopPropagation(); setShowSpecs(!showSpecs); }}>
+                <button className="absolute top-2 right-2 md:top-4 md:right-4 z-30 p-1.5 md:p-2 bg-slate-900/10 hover:bg-slate-900/20 rounded-full transition-colors text-slate-700 back-to-collection" onClick={(e) => { e.stopPropagation(); setShowSpecs(!showSpecs); }}>
                     <Info size={16} className="md:size-[20px]" />
                 </button>
             )}
@@ -463,7 +463,7 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
 
             {/* FIX AMONTONAMIENTO: Imagen ocupa 45% estricto */}
             <div
-                className="h-[45%] md:h-[50%] w-full rounded-xl md:rounded-2xl overflow-hidden bg-slate-50 flex items-center justify-center cursor-pointer relative group clickable-media border border-slate-100 shrink-0"
+                className="h-[45%] md:h-[50%] w-full rounded-lg md:rounded-2xl overflow-hidden bg-slate-50 flex items-center justify-center cursor-pointer relative group clickable-media border border-slate-100 shrink-0"
                 onClick={(e) => { e.stopPropagation(); onOpenMedia(item); }}
             >
                 <img src={principalImage} className="w-full h-full object-contain pointer-events-none transition-transform group-hover:scale-105" onError={(e) => { (e.target as any).src = 'https://placehold.co/600x800?text=Error'; }} />
@@ -474,31 +474,31 @@ function ItemContent({ item, settings, onOpenMedia }: { item: any, settings: any
                 )}
             </div>
 
-            {/* FIX AMONTONAMIENTO: Textos pequeños en celular, flex adaptado sin scroll */}
-            <div className="flex-1 flex flex-col justify-between overflow-hidden px-1 pt-2 md:pt-4 pb-1">
+            {/* FIX AMONTONAMIENTO: Textos adaptados para celular */}
+            <div className="flex-1 flex flex-col justify-between overflow-hidden px-1 pt-2 md:pt-4 pb-1 md:pb-0">
 
                 <div className="shrink-0 mb-1">
-                    {item.sku && <span className="text-[9px] md:text-sm font-black text-slate-400 mb-0 block uppercase tracking-widest font-mono truncate">{item.sku}</span>}
-                    <h3 className="text-sm md:text-3xl lg:text-4xl font-black text-slate-950 leading-tight mb-0.5 line-clamp-2">{item.name}</h3>
-                    {item.price && <div className="text-lg md:text-4xl lg:text-5xl font-black text-emerald-600 mt-0.5">${Number(item.price).toLocaleString('es-AR')}</div>}
+                    {item.sku && <span className="text-[9px] md:text-sm font-black text-slate-400 mb-0.5 block uppercase tracking-widest font-mono truncate">{item.sku}</span>}
+                    <h3 className="text-base md:text-3xl lg:text-4xl font-black text-slate-950 leading-tight mb-0.5 line-clamp-2">{item.name}</h3>
+                    {item.price && <div className="text-xl md:text-4xl lg:text-5xl font-black text-emerald-600 mt-0.5">${Number(item.price).toLocaleString('es-AR')}</div>}
                 </div>
 
-                {item.variants && (
-                    <div className="flex-1 min-h-0 flex flex-col justify-start overflow-hidden">
-                        <div className="flex flex-wrap content-start gap-1 md:gap-2 my-0.5 md:my-2">
+                <div className="flex-1 min-h-0 flex flex-col justify-start overflow-hidden">
+                    {item.variants && (
+                        <div className="flex flex-wrap content-start gap-1 md:gap-2 my-1 md:my-2">
                             {item.variants.split('|').map((v: string, i: number) => (
-                                <span key={i} className="px-1.5 py-0.5 md:px-3 md:py-1.5 border-2 border-slate-200 rounded-md md:rounded-xl text-[8px] md:text-sm font-black text-slate-700 bg-white whitespace-nowrap">{v.trim()}</span>
+                                <span key={i} className="px-1.5 py-0.5 md:px-3 md:py-1.5 border border-slate-200 md:border-2 rounded-md md:rounded-xl text-[9px] md:text-sm font-bold md:font-black text-slate-700 bg-white whitespace-nowrap">{v.trim()}</span>
                             ))}
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
 
-                <div className="shrink-0 flex gap-2 mt-auto pt-1.5 md:pt-4 border-t border-slate-100">
-                    <a href={waLink} target="_blank" className="flex-1 flex items-center justify-center gap-1.5 md:gap-2 px-2 md:px-4 py-1.5 md:py-3.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg md:rounded-xl text-[9px] md:text-sm font-black hover:bg-emerald-100 transition-colors uppercase tracking-wider whitespace-nowrap clickable-media" onClick={(e) => e.stopPropagation()}>
+                <div className="shrink-0 flex gap-1.5 md:gap-2 mt-auto pt-2 md:pt-4 border-t border-slate-100">
+                    <a href={waLink} target="_blank" className="flex-1 flex items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-3.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg md:rounded-xl text-[9px] md:text-sm font-black hover:bg-emerald-100 transition-colors uppercase tracking-wider whitespace-nowrap clickable-media" onClick={(e) => e.stopPropagation()}>
                         <MessageSquareText size={14} className="md:size-5" /> Consultar
                     </a>
                     {igLink !== '#' && (
-                        <a href={igLink} target="_blank" className="flex-1 flex items-center justify-center gap-1.5 md:gap-2 px-2 md:px-4 py-1.5 md:py-3.5 bg-white border-2 border-slate-200 text-slate-700 rounded-lg md:rounded-xl text-[9px] md:text-sm font-black hover:border-slate-900 hover:text-slate-900 transition-colors uppercase tracking-wider whitespace-nowrap clickable-media" onClick={(e) => e.stopPropagation()}>
+                        <a href={igLink} target="_blank" className="flex-1 flex items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-3.5 bg-white border border-slate-200 md:border-2 text-slate-700 rounded-lg md:rounded-xl text-[9px] md:text-sm font-black hover:border-slate-900 hover:text-slate-900 transition-colors uppercase tracking-wider whitespace-nowrap clickable-media" onClick={(e) => e.stopPropagation()}>
                             <InstagramIcon size={14} /> Instagram
                         </a>
                     )}
@@ -557,7 +557,7 @@ function MediaCarouselModal({ item, onClose }: { item: any, onClose: () => void 
             <div className="relative w-full h-full flex items-center justify-center p-4 md:p-12" onClick={(e) => e.stopPropagation()}>
 
                 {currentMedia.type === 'image' && (
-                    <img src={currentMedia.url} className="max-w-[90vw] max-h-[85vh] object-contain rounded-xl shadow-2xl" />
+                    <img src={currentMedia.url} className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl" />
                 )}
 
                 {currentMedia.type === 'video' && (
@@ -585,7 +585,7 @@ function MediaCarouselModal({ item, onClose }: { item: any, onClose: () => void 
 
                         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-black/50 backdrop-blur-sm rounded-full flex gap-1.5 z-50">
                             {mediaSources.map((_, idx) => (
-                                <div key={idx} className={`w-1.5 h-1.5 rounded-full transition-all ${idx === currentIndex ? 'bg-white w-4' : 'bg-white/30'}`}></div>
+                                <div key={idx} className={`w-1.5 h-1.5 rounded-full transition-all ${idx === currentIndex ? 'bg-white w-3' : 'bg-white/30'}`}></div>
                             ))}
                         </div>
                     </>
