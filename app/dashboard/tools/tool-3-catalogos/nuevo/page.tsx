@@ -211,25 +211,37 @@ export default function CrearRevista() {
                 </div>
             </div>
 
-            {/* MODAL DB */}
+            {/* MODAL DB (REPARADO) */}
             {showDbModal && (
                 <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white rounded-[2rem] w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
                             <h3 className="font-black text-lg flex items-center gap-2"><Database className="text-indigo-500" /> Catálogo Web</h3>
                             <button onClick={() => setShowDbModal(false)} className="p-2 bg-white rounded-full hover:bg-red-50 hover:text-red-500 transition-colors"><X size={20} /></button>
                         </div>
-                        <div className="p-6 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {productosDB.map(p => (
-                                <div key={p.id} className="flex items-center gap-3 border border-slate-200 p-3 rounded-2xl hover:border-indigo-400 hover:shadow-md cursor-pointer transition-all bg-white" onClick={() => agregarProductoDb(p)}>
-                                    <img src={p.image_urls?.[0]} className="w-16 h-16 rounded-xl object-cover bg-slate-50" onError={(e) => { (e.target as any).src = 'https://placehold.co/100x100?text=Error'; }} />
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-bold text-sm truncate">{p.name}</p>
-                                        <p className="text-xs text-slate-500 mt-1">${p.price_installments}</p>
-                                    </div>
-                                    <Plus className="text-indigo-500 shrink-0" size={20} />
+                        <div className="p-6 overflow-y-auto flex-1 min-h-[200px]">
+                            {loading ? (
+                                <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin text-indigo-500" size={32} /></div>
+                            ) : productosDB.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                                    <Database size={48} className="mb-3 opacity-50" />
+                                    <p className="font-bold">No hay productos en el Catálogo Web.</p>
+                                    <p className="text-sm mt-2">Podés usar la "Carga Manual (Drive)" para sumar artículos.</p>
                                 </div>
-                            ))}
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {productosDB.map(p => (
+                                        <div key={p.id} className="flex items-center gap-3 border border-slate-200 p-3 rounded-2xl hover:border-indigo-400 hover:shadow-md cursor-pointer transition-all bg-white" onClick={() => agregarProductoDb(p)}>
+                                            <img src={p.image_urls?.[0]} className="w-16 h-16 rounded-xl object-cover bg-slate-50" onError={(e) => { (e.target as any).src = 'https://placehold.co/100x100?text=Error'; }} />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-sm truncate">{p.name}</p>
+                                                <p className="text-xs text-slate-500 mt-1">${p.price_installments}</p>
+                                            </div>
+                                            <Plus className="text-indigo-500 shrink-0" size={20} />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
