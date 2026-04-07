@@ -15,6 +15,7 @@ export default function EditarRevista() {
 
     const [loadingPage, setLoadingPage] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [loading, setLoading] = useState(false); // FIX: Faltaba esta variable que pedía Vercel
     const [productosDB, setProductosDB] = useState<any[]>([]);
 
     const [name, setName] = useState('');
@@ -94,7 +95,7 @@ export default function EditarRevista() {
 
     const agregarProductoManualYGuardarEnBD = async () => {
         if (manualImages.length === 0 || !manualName) return alert("Imagen y Nombre obligatorios");
-        setSaving(true);
+        setLoading(true);
 
         const finalSpecs = manualSpecs.filter(s => s.clave.trim() && s.valor.trim());
         const finalVariants = manualVariants.trim() ? [{ id: Date.now(), nombre: 'Variante', valores: manualVariants }] : [];
@@ -117,7 +118,7 @@ export default function EditarRevista() {
 
         setManualImages([]); setManualName(''); setManualSku(''); setManualPrice(''); setManualVariants(''); setManualVideo('');
         setManualSpecs([{ id: 1, clave: '', valor: '' }]);
-        setShowManualModal(false); setSaving(false);
+        setShowManualModal(false); setLoading(false);
     };
 
     const eliminarItem = (itemId: string) => setItems(items.filter(i => i.id !== itemId));
@@ -140,6 +141,7 @@ export default function EditarRevista() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* LADO IZQUIERDO: CONFIGURACIÓN */}
                 <div className="lg:col-span-4 space-y-6">
                     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
                         <h2 className="font-bold text-lg border-b border-slate-100 pb-3 flex items-center gap-2"><Layout size={18} className="text-violet-500" /> Diseño de Portada</h2>
@@ -175,6 +177,7 @@ export default function EditarRevista() {
                     </div>
                 </div>
 
+                {/* LADO DERECHO: PÁGINAS */}
                 <div className="lg:col-span-8 space-y-6">
                     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm min-h-[500px] flex flex-col">
                         <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4 overflow-x-auto gap-3">
@@ -216,10 +219,11 @@ export default function EditarRevista() {
                 </div>
             </div>
 
+            {/* MODAL DB */}
             {showDbModal && (
                 <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white rounded-[2rem] w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                             <h3 className="font-black text-lg flex items-center gap-2"><Database className="text-indigo-500" /> Catálogo Web</h3>
                             <button onClick={() => setShowDbModal(false)} className="p-2 bg-white rounded-full hover:bg-red-50 hover:text-red-500 transition-colors"><X size={20} /></button>
                         </div>
@@ -250,6 +254,7 @@ export default function EditarRevista() {
                 </div>
             )}
 
+            {/* MODAL MANUAL */}
             {showManualModal && (
                 <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white rounded-[2rem] w-full max-w-4xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col">
