@@ -66,3 +66,28 @@ export async function obtenerProductosParaCatalogoAction() {
         return { success: true, data };
     } catch (error: any) { return { success: false, error: error.message }; }
 }
+
+// NUEVO: Guardar Colecciones
+export async function guardarColeccionAction(coleccion: any) {
+    try {
+        const payload = {
+            name: coleccion.name,
+            cover_color: coleccion.cover_color || '#4f46e5',
+            description: JSON.stringify(coleccion.magazines)
+        };
+        const { error } = await supabase.from('tool_catalog_collections').insert([payload]);
+        if (error) throw new Error(error.message);
+        revalidatePath('/dashboard/tools/tool-3-catalogos');
+        return { success: true };
+    } catch (error: any) { return { success: false, error: error.message }; }
+}
+
+// NUEVO: Eliminar Colecciones
+export async function eliminarColeccionAction(id: string) {
+    try {
+        const { error } = await supabase.from('tool_catalog_collections').delete().eq('id', id);
+        if (error) throw new Error(error.message);
+        revalidatePath('/dashboard/tools/tool-3-catalogos');
+        return { success: true };
+    } catch (error: any) { return { success: false, error: error.message }; }
+}
