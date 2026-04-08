@@ -72,17 +72,17 @@ export default function DashboardHome() {
                     </div>
                 </Link>
 
-                {/* TOOL 4: ESTUDIO IA */}
-                <Link href="/dashboard/tools/tool-4-ai-studio" className="relative bg-slate-900 p-8 rounded-3xl border border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group flex flex-col h-full overflow-hidden">
-                    <div className="absolute inset-0 bg-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="bg-slate-800 border border-slate-700 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:border-pink-700 transition-colors duration-300 relative">
-                        <Sparkles size={30} className="text-slate-300 group-hover:text-pink-400 transition-colors" />
+                {/* TOOL 4: SESIONES IA */}
+                <Link href="/dashboard/tools/tool-4-ai" className="relative bg-slate-900 p-8 rounded-3xl border border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group flex flex-col h-full overflow-hidden">
+                    <div className="absolute inset-0 bg-rose-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="bg-slate-800 border border-slate-700 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:border-rose-700 transition-colors duration-300 relative">
+                        <Sparkles size={30} className="text-slate-300 group-hover:text-rose-400 transition-colors" />
                     </div>
-                    <h2 className="text-2xl font-black text-white mb-3 group-hover:text-pink-400 transition-colors relative">Estudio IA</h2>
+                    <h2 className="text-2xl font-black text-white mb-3 group-hover:text-rose-400 transition-colors relative">Sesiones IA</h2>
                     <p className="text-slate-300 mb-8 font-medium leading-relaxed flex-1 relative">
-                        Generá sesiones de fotos y videos profesionales de tus productos usando Inteligencia Artificial.
+                        Generá fotos y videos profesionales de tus productos con inteligencia artificial. Fondos, poses, estilos y más.
                     </p>
-                    <div className="mt-auto flex items-center gap-2 text-pink-400 font-black text-xs uppercase tracking-widest opacity-80 group-hover:opacity-100 transition-opacity relative">
+                    <div className="mt-auto flex items-center gap-2 text-rose-400 font-black text-xs uppercase tracking-widest opacity-80 group-hover:opacity-100 transition-opacity relative">
                         Abrir Herramienta <ArrowRight size={16} className="group-hover:translate-x-1.5 transition-transform" />
                     </div>
                 </Link>
