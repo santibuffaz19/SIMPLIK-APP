@@ -70,17 +70,62 @@ export async function obtenerHistorialGeneracionesAction() {
     }
 }
 
+// --- HELPER: CONSTRUCTOR DE PROMPT PRO ---
+// Esta función toma todos tus inputs y los convierte en lenguaje que la IA entiende perfecto.
+function construirPromptPro(params: any, type: string, mode: string) {
+    const { background, pose, interaction, extraPrompt, style } = params;
+
+    // Base de calidad fotográfica
+    let prompt = `Professional high-end commercial ${type} photography. `;
+
+    if (mode === 'food') {
+        prompt += "Delicious appetizing food styling. ";
+    }
+
+    // Integración del fondo (Background)
+    if (background) {
+        prompt += `The scene is set in a stunning ${background}. The environment is realistically rendered with perfect depth of field. `;
+    }
+
+    // Integración de la pose y posición
+    if (pose) {
+        prompt += `The main object is ${pose}. `;
+    }
+
+    // Integración de la interacción
+    if (interaction) {
+        prompt += `Atmospheric effect: ${interaction}. `;
+    }
+
+    // Estilo y Calidad Final
+    const styleMap: any = {
+        premium: "Luxury aesthetic, clean studio lighting, high-end commercial retouching.",
+        editorial: "Magazine style, artistic composition, dramatic shadows and highlights.",
+        lifestyle: "Natural lighting, authentic vibe, candid professional shot.",
+        cinematic: "Movie-like color grading, epic anamorphic flares, highly atmospheric.",
+        minimalist: "Solid clean colors, simple geometry, soft diffused lighting."
+    };
+
+    prompt += `${styleMap[style] || styleMap.premium} `;
+
+    // Agregamos tus instrucciones extra
+    if (extraPrompt) {
+        prompt += `${extraPrompt}. `;
+    }
+
+    // Blindaje de calidad técnica
+    prompt += "8k resolution, shot on 35mm lens, f/1.8, sharp focus on the product, global illumination, raytraced reflections, Masterpiece.";
+
+    return prompt;
+}
+
 // --- SERVICIO CORE DE GENERACIÓN IA (FAL.AI) ---
 
 export async function generateMediaWithAIAction(payload: any) {
     try {
-        // 1. OBTENER API KEY
         const falApiKey = process.env.FAL_KEY;
-        if (!falApiKey) {
-            throw new Error("Falta configurar FAL_KEY en las variables de entorno de Vercel.");
-        }
+        if (!falApiKey) throw new Error("Falta FAL_KEY en variables de entorno.");
 
-        // 2. REGISTRAR INTENTO EN BD (ESTADO "PROCESSING")
         const generationRecord = {
             generation_type: payload.type,
             mode: payload.mode,
@@ -95,58 +140,35 @@ export async function generateMediaWithAIAction(payload: any) {
         const { data: dbRecord, error: dbError } = await supabase
             .from('ai_media_generations')
             .insert([generationRecord])
-            .select()
-            .single();
+            .select().single();
 
-        if (dbError) throw new Error("No se pudo iniciar el registro en la base de datos.");
+        if (dbError) throw new Error("Error registrando en DB.");
 
-        // 3. PREPARAR DATOS DE REFERENCIA
         let imageUrlToProcess = '';
-
-        if (payload.uploadedImages && payload.uploadedImages.length > 0) {
+        if (payload.uploadedImages?.length > 0) {
             imageUrlToProcess = payload.uploadedImages[0];
-        } else if (payload.productIds && payload.productIds.length > 0) {
-            const { data: productData } = await supabase
-                .from('products')
-                .select('internal_reference_images, image_urls')
-                .eq('id', payload.productIds[0])
-                .single();
-
-            if (productData) {
-                if (productData.internal_reference_images && productData.internal_reference_images.length > 0) {
-                    imageUrlToProcess = productData.internal_reference_images[0];
-                } else if (productData.image_urls && productData.image_urls.length > 0) {
-                    imageUrlToProcess = productData.image_urls[0];
-                }
-            }
+        } else if (payload.productIds?.length > 0) {
+            const { data: prod } = await supabase.from('products').select('internal_reference_images, image_urls').eq('id', payload.productIds[0]).single();
+            imageUrlToProcess = prod?.internal_reference_images?.[0] || prod?.image_urls?.[0] || '';
         }
 
-        if (!imageUrlToProcess) {
-            throw new Error("No se encontró ninguna imagen válida para enviar a la IA.");
-        }
+        if (!imageUrlToProcess) throw new Error("No hay imagen de referencia.");
 
-        // 4. CONSTRUCCIÓN DE PROMPT Y CONFIGURACIÓN
-        const { background, pose, interaction, extraPrompt, style, duration, aspectRatio } = payload.parameters;
+        // ARMADO DEL PROMPT PRO USANDO TODA LA INFO DEL CLIENTE
+        const finalPrompt = construirPromptPro(payload.parameters, payload.type, payload.mode);
 
         let falEndpoint = '';
         let falRequestBody: any = {};
-        let finalPrompt = '';
 
         if (payload.type === 'photo') {
             if (payload.mode === 'fashion') {
                 falEndpoint = 'https://queue.fal.run/fal-ai/idm-vton';
-
                 let humanModelUrl = '';
                 if (payload.savedModelId) {
                     const { data: savedModel } = await supabase.from('ai_saved_models').select('reference_images').eq('id', payload.savedModelId).single();
-                    if (savedModel && savedModel.reference_images.length > 0) {
-                        humanModelUrl = savedModel.reference_images[0];
-                    }
+                    humanModelUrl = savedModel?.reference_images?.[0] || '';
                 }
-
-                if (!humanModelUrl) throw new Error("Falta seleccionar un modelo humano.");
-
-                finalPrompt = `Fashion photography, ${style} style, ${background}. ${pose}. ${extraPrompt}`;
+                if (!humanModelUrl) throw new Error("Falta modelo humano.");
 
                 falRequestBody = {
                     human_image_url: humanModelUrl,
@@ -155,153 +177,64 @@ export async function generateMediaWithAIAction(payload: any) {
                     category: "upper_body"
                 };
             } else {
-                // MODO PRODUCTO/COMIDA -> Usamos FLUX DEV IMAGE-TO-IMAGE
+                // USAMOS FLUX REDUX O IMAGE-TO-IMAGE CON STRENGTH AJUSTADO
                 falEndpoint = 'https://queue.fal.run/fal-ai/flux/dev/image-to-image';
-
-                // MEJORA DEL PROMPT PARA PRIORIZAR IDENTIDAD
-                finalPrompt = `Professional photo taken with a DSLR camera. altamente detallado, nítido, photorealistic. `;
-                if (payload.mode === 'food') finalPrompt = `Professional appetizing food photography, fresh. `;
-
-                finalPrompt += `The product object (geometry, handle, cap, logos, texture, exact shape) must be strictly preserved from the original image and remain identical without any distortion. `;
-                finalPrompt += `The background environment is: ${background}. `;
-                if (interaction) finalPrompt += `${interaction}. `;
-                if (pose) finalPrompt += `Positioned ${pose}. `;
-                finalPrompt += `Style: ${style}. Extra details: ${extraPrompt}.`;
-
                 falRequestBody = {
                     image_url: imageUrlToProcess,
                     prompt: finalPrompt,
-                    // SOLUCIÓN: Strength muy bajo para preservar identidad del producto
-                    // La IA tiene solo 30% libertad para cambiar, el resto es la original intacta.
-                    strength: 0.3,
-                    num_inference_steps: 40 // Más pasos para mejorar nitidez
+                    // BAJAMOS STRENGTH para que respete el termo pero cambie el fondo
+                    strength: 0.45,
+                    num_inference_steps: 40,
+                    guidance_scale: 7.5
                 };
             }
-        } else if (payload.type === 'video') {
+        } else {
+            // VIDEO MODO
             falEndpoint = 'https://queue.fal.run/fal-ai/kling-video/v1/standard/image-to-video';
-
-            finalPrompt = `Cinematic video shot. `;
-            if (payload.mode === 'food') finalPrompt = `Cinematic food commercial. `;
-            if (payload.mode === 'fashion') finalPrompt = `Fashion promotional video. `;
-
-            finalPrompt += `Environment: ${background}. `;
-            if (interaction) finalPrompt += `Action: ${interaction}. `;
-            finalPrompt += `Style: ${style}. ${extraPrompt}. Smooth camera movement. The product in the video must look exactly like the input product without any changes.`;
-
             falRequestBody = {
                 image_url: imageUrlToProcess,
                 prompt: finalPrompt,
-                duration: duration === '5s' ? '5' : '10',
-                aspect_ratio: aspectRatio || "16:9"
+                duration: payload.parameters.duration === '5s' ? '5' : '10',
+                aspect_ratio: payload.parameters.aspectRatio || "16:9"
             };
         }
 
-        // 5. LLAMADA A FAL.AI (USANDO CACHE: NO-STORE PARA EVITAR BUGS DE NEXTJS)
+        // COMUNICACIÓN CON IA
         const submitResponse = await fetch(falEndpoint, {
             method: 'POST',
-            headers: {
-                'Authorization': `Key ${falApiKey}`,
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Authorization': `Key ${falApiKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify(falRequestBody),
             cache: 'no-store'
         });
 
-        if (!submitResponse.ok) {
-            const errorData = await submitResponse.text();
-            throw new Error(`FAL API RECHAZÓ LA SOLICITUD: ${errorData}`);
-        }
-
+        if (!submitResponse.ok) throw new Error(await submitResponse.text());
         const submitData = await submitResponse.json();
-        const statusUrl = submitData.status_url;
-        const responseUrl = submitData.response_url;
 
-        if (!statusUrl || !responseUrl) {
-            throw new Error(`FAL API devolvió una respuesta incompleta: ${JSON.stringify(submitData)}`);
-        }
-
-        // Polling con no-store
         let status = 'IN_QUEUE';
+        let resultUrl = '';
         let attempts = 0;
-        const maxAttempts = 60; // 2 minutos máximo
 
-        while (status !== 'COMPLETED' && status !== 'FAILED' && attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            const statusResponse = await fetch(statusUrl, {
-                headers: { 'Authorization': `Key ${falApiKey}` },
-                cache: 'no-store'
-            });
-
-            if (statusResponse.ok) {
-                const statusJson = await statusResponse.json();
-                status = statusJson.status;
-            } else {
-                const errText = await statusResponse.text();
-                throw new Error(`Error consultando estado a FAL: ${errText}`);
+        while (status !== 'COMPLETED' && attempts < 60) {
+            await new Promise(r => setTimeout(r, 2500));
+            const res = await fetch(submitData.status_url, { headers: { 'Authorization': `Key ${falApiKey}` }, cache: 'no-store' });
+            const json = await res.json();
+            status = json.status;
+            if (status === 'COMPLETED') {
+                const finalRes = await fetch(submitData.response_url, { headers: { 'Authorization': `Key ${falApiKey}` }, cache: 'no-store' });
+                const finalJson = await finalRes.json();
+                resultUrl = payload.type === 'video' ? finalJson.video?.url : (finalJson.images?.[0]?.url || finalJson.image?.url);
             }
             attempts++;
         }
 
-        if (status === 'FAILED') {
-            const failResponse = await fetch(responseUrl, {
-                headers: { 'Authorization': `Key ${falApiKey}` },
-                cache: 'no-store'
-            });
-            const failData = await failResponse.text();
-            throw new Error(`La IA falló internamente al procesar la imagen. Razón: ${failData}`);
-        }
+        if (!resultUrl) throw new Error("No se obtuvo URL final.");
 
-        if (status !== 'COMPLETED') {
-            throw new Error("Tiempo de espera agotado (Timeout).");
-        }
-
-        // Traer el archivo final
-        const resultResponse = await fetch(responseUrl, {
-            headers: { 'Authorization': `Key ${falApiKey}`, 'Accept': 'application/json' },
-            cache: 'no-store'
-        });
-
-        if (!resultResponse.ok) {
-            const errorData = await resultResponse.text();
-            throw new Error(`Error descargando resultado de FAL: ${errorData}`);
-        }
-
-        const resultJson = await resultResponse.json();
-
-        // Extraer la URL
-        let resultUrl = '';
-        if (payload.type === 'photo' && payload.mode === 'fashion') {
-            resultUrl = resultJson.image?.url || resultJson.images?.[0]?.url;
-        } else if (payload.type === 'photo') {
-            resultUrl = resultJson.images?.[0]?.url || resultJson.image?.url;
-        } else if (payload.type === 'video') {
-            resultUrl = resultJson.video?.url;
-        }
-
-        if (!resultUrl) {
-            throw new Error(`La IA no devolvió un archivo multimedia válido. Respuesta: ${JSON.stringify(resultJson)}`);
-        }
-
-        // 6. ACTUALIZAMOS LA BASE DE DATOS
-        await supabase
-            .from('ai_media_generations')
-            .update({
-                status: 'completed',
-                final_ai_prompt: finalPrompt,
-                result_url: resultUrl
-            })
-            .eq('id', dbRecord.id);
-
+        await supabase.from('ai_media_generations').update({ status: 'completed', final_ai_prompt: finalPrompt, result_url: resultUrl }).eq('id', dbRecord.id);
         revalidatePath('/dashboard/tools/tool-4-ai-studio');
 
-        return {
-            success: true,
-            result: { id: dbRecord.id, url: resultUrl, prompt: finalPrompt }
-        };
+        return { success: true, result: { id: dbRecord.id, url: resultUrl, prompt: finalPrompt } };
 
     } catch (error: any) {
-        console.error("AI Gen Error:", error);
         return { success: false, error: error.message };
     }
 }
