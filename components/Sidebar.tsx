@@ -66,7 +66,7 @@ export default function Sidebar() {
                                 <span className="font-medium">Catálogos 3D</span>
                             </Link>
 
-                            <Link href="/dashboard/tools/tool-4-ai" onClick={() => setIsOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-colors border border-rose-500/20">
+                            <Link href="/dashboard/tools/tool-4-ai-studio" onClick={() => setIsOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-colors border border-rose-500/20">
                                 <Sparkles size={20} />
                                 <span className="font-medium">Sesiones IA</span>
                             </Link>

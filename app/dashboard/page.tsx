@@ -73,7 +73,7 @@ export default function DashboardHome() {
                 </Link>
 
                 {/* TOOL 4: SESIONES IA */}
-                <Link href="/dashboard/tools/tool-4-ai" className="relative bg-slate-900 p-8 rounded-3xl border border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group flex flex-col h-full overflow-hidden">
+                <Link href="/dashboard/tools/tool-4-ai-studio" className="relative bg-slate-900 p-8 rounded-3xl border border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group flex flex-col h-full overflow-hidden">
                     <div className="absolute inset-0 bg-rose-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     <div className="bg-slate-800 border border-slate-700 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:border-rose-700 transition-colors duration-300 relative">
                         <Sparkles size={30} className="text-slate-300 group-hover:text-rose-400 transition-colors" />
