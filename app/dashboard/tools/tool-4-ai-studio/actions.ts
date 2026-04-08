@@ -3,35 +3,20 @@
 import { supabase } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
 
-// --- SERVICIOS DE BASE DE DATOS PARA TOOL 4 ---
-
 export async function obtenerProductosParaAIAction() {
     try {
-        const { data, error } = await supabase
-            .from('products')
-            .select('id, name, sku, image_urls, internal_reference_images, category')
-            .order('created_at', { ascending: false });
-
+        const { data, error } = await supabase.from('products').select('id, name, sku, image_urls, internal_reference_images, category').order('created_at', { ascending: false });
         if (error) throw new Error(error.message);
         return { success: true, data };
-    } catch (error: any) {
-        return { success: false, error: error.message };
-    }
+    } catch (error: any) { return { success: false, error: error.message }; }
 }
 
 export async function obtenerModelosGuardadosAction() {
     try {
-        const { data, error } = await supabase
-            .from('ai_saved_models')
-            .select('*')
-            .eq('is_active', true)
-            .order('created_at', { ascending: false });
-
+        const { data, error } = await supabase.from('ai_saved_models').select('*').eq('is_active', true).order('created_at', { ascending: false });
         if (error) throw new Error(error.message);
         return { success: true, data };
-    } catch (error: any) {
-        return { success: false, error: error.message };
-    }
+    } catch (error: any) { return { success: false, error: error.message }; }
 }
 
 export async function guardarModeloAction(modelData: any) {
@@ -40,9 +25,7 @@ export async function guardarModeloAction(modelData: any) {
         if (error) throw new Error(error.message);
         revalidatePath('/dashboard/tools/tool-4-ai-studio/configuracion');
         return { success: true };
-    } catch (error: any) {
-        return { success: false, error: error.message };
-    }
+    } catch (error: any) { return { success: false, error: error.message }; }
 }
 
 export async function eliminarModeloAction(id: string) {
@@ -51,76 +34,46 @@ export async function eliminarModeloAction(id: string) {
         if (error) throw new Error(error.message);
         revalidatePath('/dashboard/tools/tool-4-ai-studio/configuracion');
         return { success: true };
-    } catch (error: any) {
-        return { success: false, error: error.message };
-    }
+    } catch (error: any) { return { success: false, error: error.message }; }
 }
 
 export async function obtenerHistorialGeneracionesAction() {
     try {
-        const { data, error } = await supabase
-            .from('ai_media_generations')
-            .select('*')
-            .order('created_at', { ascending: false });
-
+        const { data, error } = await supabase.from('ai_media_generations').select('*').order('created_at', { ascending: false });
         if (error) throw new Error(error.message);
         return { success: true, data };
-    } catch (error: any) {
-        return { success: false, error: error.message };
-    }
+    } catch (error: any) { return { success: false, error: error.message }; }
 }
 
-// --- HELPER: CONSTRUCTOR DE PROMPT PRO ---
-// Esta función toma todos tus inputs y los convierte en lenguaje que la IA entiende perfecto.
+// --- HELPER: CONSTRUCTOR DE PROMPT PRO ESTRICTO ---
 function construirPromptPro(params: any, type: string, mode: string) {
     const { background, pose, interaction, extraPrompt, style } = params;
 
-    // Base de calidad fotográfica
-    let prompt = `Professional high-end commercial ${type} photography. `;
+    let prompt = `CRITICAL INSTRUCTION: Keep the central object EXACTLY as it is in the reference image. DO NOT change its shape, text, or logos. `;
 
-    if (mode === 'food') {
-        prompt += "Delicious appetizing food styling. ";
-    }
-
-    // Integración del fondo (Background)
     if (background) {
-        prompt += `The scene is set in a stunning ${background}. The environment is realistically rendered with perfect depth of field. `;
+        prompt += `HOWEVER, YOU MUST COMPLETELY REPLACE THE BACKGROUND WITH: A beautiful ${background}. Ensure the object is perfectly integrated into this new background with realistic shadows and reflections. `;
     }
 
-    // Integración de la pose y posición
-    if (pose) {
-        prompt += `The main object is ${pose}. `;
-    }
+    if (pose) prompt += `Position: ${pose}. `;
+    if (interaction) prompt += `Interaction/Effect: ${interaction}. `;
 
-    // Integración de la interacción
-    if (interaction) {
-        prompt += `Atmospheric effect: ${interaction}. `;
-    }
-
-    // Estilo y Calidad Final
     const styleMap: any = {
-        premium: "Luxury aesthetic, clean studio lighting, high-end commercial retouching.",
-        editorial: "Magazine style, artistic composition, dramatic shadows and highlights.",
-        lifestyle: "Natural lighting, authentic vibe, candid professional shot.",
-        cinematic: "Movie-like color grading, epic anamorphic flares, highly atmospheric.",
-        minimalist: "Solid clean colors, simple geometry, soft diffused lighting."
+        premium: "Luxury e-commerce aesthetic, clean high-end commercial retouching.",
+        editorial: "Magazine editorial style, dramatic artistic composition.",
+        lifestyle: "Natural lighting, authentic lifestyle vibe.",
+        cinematic: "Cinematic color grading, epic atmosphere.",
+        minimalist: "Minimalist, solid clean colors, soft diffused lighting."
     };
 
     prompt += `${styleMap[style] || styleMap.premium} `;
+    if (extraPrompt) prompt += `Additional details: ${extraPrompt}. `;
 
-    // Agregamos tus instrucciones extra
-    if (extraPrompt) {
-        prompt += `${extraPrompt}. `;
-    }
-
-    // Blindaje de calidad técnica
-    prompt += "8k resolution, shot on 35mm lens, f/1.8, sharp focus on the product, global illumination, raytraced reflections, Masterpiece.";
-
+    prompt += "Extremely detailed, 8k resolution, photorealistic masterpiece.";
     return prompt;
 }
 
 // --- SERVICIO CORE DE GENERACIÓN IA (FAL.AI) ---
-
 export async function generateMediaWithAIAction(payload: any) {
     try {
         const falApiKey = process.env.FAL_KEY;
@@ -137,11 +90,7 @@ export async function generateMediaWithAIAction(payload: any) {
             provider: 'fal.ai'
         };
 
-        const { data: dbRecord, error: dbError } = await supabase
-            .from('ai_media_generations')
-            .insert([generationRecord])
-            .select().single();
-
+        const { data: dbRecord, error: dbError } = await supabase.from('ai_media_generations').insert([generationRecord]).select().single();
         if (dbError) throw new Error("Error registrando en DB.");
 
         let imageUrlToProcess = '';
@@ -154,7 +103,6 @@ export async function generateMediaWithAIAction(payload: any) {
 
         if (!imageUrlToProcess) throw new Error("No hay imagen de referencia.");
 
-        // ARMADO DEL PROMPT PRO USANDO TODA LA INFO DEL CLIENTE
         const finalPrompt = construirPromptPro(payload.parameters, payload.type, payload.mode);
 
         let falEndpoint = '';
@@ -177,19 +125,17 @@ export async function generateMediaWithAIAction(payload: any) {
                     category: "upper_body"
                 };
             } else {
-                // USAMOS FLUX REDUX O IMAGE-TO-IMAGE CON STRENGTH AJUSTADO
                 falEndpoint = 'https://queue.fal.run/fal-ai/flux/dev/image-to-image';
                 falRequestBody = {
                     image_url: imageUrlToProcess,
                     prompt: finalPrompt,
-                    // BAJAMOS STRENGTH para que respete el termo pero cambie el fondo
-                    strength: 0.45,
+                    // PUNTO CLAVE: 0.65 permite cambiar el fondo sin destruir el objeto. Guidance 10 obliga a hacerte caso.
+                    strength: 0.65,
                     num_inference_steps: 40,
-                    guidance_scale: 7.5
+                    guidance_scale: 10.0
                 };
             }
         } else {
-            // VIDEO MODO
             falEndpoint = 'https://queue.fal.run/fal-ai/kling-video/v1/standard/image-to-video';
             falRequestBody = {
                 image_url: imageUrlToProcess,
@@ -199,7 +145,6 @@ export async function generateMediaWithAIAction(payload: any) {
             };
         }
 
-        // COMUNICACIÓN CON IA
         const submitResponse = await fetch(falEndpoint, {
             method: 'POST',
             headers: { 'Authorization': `Key ${falApiKey}`, 'Content-Type': 'application/json' },
@@ -223,6 +168,8 @@ export async function generateMediaWithAIAction(payload: any) {
                 const finalRes = await fetch(submitData.response_url, { headers: { 'Authorization': `Key ${falApiKey}` }, cache: 'no-store' });
                 const finalJson = await finalRes.json();
                 resultUrl = payload.type === 'video' ? finalJson.video?.url : (finalJson.images?.[0]?.url || finalJson.image?.url);
+            } else if (status === 'FAILED') {
+                throw new Error("Fal.ai reportó un error durante el procesamiento.");
             }
             attempts++;
         }

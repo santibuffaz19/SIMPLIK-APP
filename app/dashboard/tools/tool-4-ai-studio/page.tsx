@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Camera, Video, Image as ImageIcon, Settings, Loader2, Sparkles, UserCircle, Upload, ChevronRight, History, Download, RefreshCw, ShoppingBag, Shirt, Utensils, AlertCircle, X } from 'lucide-react';
 import { obtenerProductosParaAIAction, obtenerModelosGuardadosAction, generateMediaWithAIAction, obtenerHistorialGeneracionesAction } from './actions';
-// Ajustá esta ruta si tu actions de Tool 1 está en otra carpeta
 import { uploadImageAction } from '../tool-1-QR/actions';
 
 export default function AiStudioDashboard() {
@@ -12,28 +11,23 @@ export default function AiStudioDashboard() {
     const [mode, setMode] = useState<'product' | 'fashion' | 'food'>('product');
     const [loadingData, setLoadingData] = useState(true);
 
-    // Data de Backend
     const [productos, setProductos] = useState<any[]>([]);
     const [modelos, setModelos] = useState<any[]>([]);
     const [historial, setHistorial] = useState<any[]>([]);
 
-    // Estados de Formulario
     const [selectedProductId, setSelectedProductId] = useState<string>('');
     const [manualImages, setManualImages] = useState<string[]>([]);
     const [uploadingManual, setUploadingManual] = useState(false);
-
     const [selectedModelId, setSelectedModelId] = useState<string>('');
 
-    // Parámetros IA
     const [paramBackground, setParamBackground] = useState('');
     const [paramPose, setParamPose] = useState('');
     const [paramInteraction, setParamInteraction] = useState('');
     const [paramStyle, setParamStyle] = useState('premium');
     const [paramExtra, setParamExtra] = useState('');
-    const [paramDuration, setParamDuration] = useState('5s'); // Video
-    const [paramRatio, setParamRatio] = useState('16:9'); // Video
+    const [paramDuration, setParamDuration] = useState('5s');
+    const [paramRatio, setParamRatio] = useState('16:9');
 
-    // Generación
     const [isGenerating, setIsGenerating] = useState(false);
     const [currentResult, setCurrentResult] = useState<any>(null);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -74,6 +68,33 @@ export default function AiStudioDashboard() {
         setManualImages(manualImages.filter((_, index) => index !== indexToRemove));
     };
 
+    // NUEVA FUNCIÓN: Descarga forzada en archivo (Evita que se abra en otra pestaña)
+    const handleDownload = async (url: string, type: string) => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            const extension = url.includes('.mp4') ? 'mp4' : 'jpg';
+            a.download = `simplik-${type}-${Date.now()}.${extension}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.error("Error al descargar el archivo, abriendo en pestaña nueva:", error);
+            // Fallback por si la red bloquea la descarga directa
+            const a = document.createElement('a');
+            a.href = url;
+            a.target = '_blank';
+            a.download = `simplik-${type}-${Date.now()}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    };
+
     const handleGenerate = async () => {
         setErrorMsg(null);
         if (!selectedProductId && manualImages.length === 0) {
@@ -107,7 +128,6 @@ export default function AiStudioDashboard() {
         const res = await generateMediaWithAIAction(payload);
         if (res.success && res.result) {
             setCurrentResult(res.result);
-            // Refrescar historial silenciosamente
             const resHist = await obtenerHistorialGeneracionesAction();
             if (resHist.success && resHist.data) setHistorial(resHist.data);
         } else {
@@ -121,7 +141,6 @@ export default function AiStudioDashboard() {
     return (
         <div className="max-w-[1400px] mx-auto p-4 md:p-8 font-sans text-slate-800 min-h-screen pb-24">
 
-            {/* HEADER */}
             <header className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 mt-12 md:mt-0 md:ml-0 ml-12">
                 <div>
                     <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
@@ -136,7 +155,6 @@ export default function AiStudioDashboard() {
                 </div>
             </header>
 
-            {/* ERROR ALERT */}
             {errorMsg && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3 text-red-700">
                     <AlertCircle size={20} className="shrink-0 mt-0.5" />
@@ -147,7 +165,6 @@ export default function AiStudioDashboard() {
                 </div>
             )}
 
-            {/* TABS DE MODO PRINCIPAL */}
             <div className="flex p-1.5 bg-slate-200/60 rounded-2xl w-fit mb-8 border border-slate-200 shadow-inner">
                 <button onClick={() => setActiveTab('photo')} className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold transition-all duration-300 ${activeTab === 'photo' ? 'bg-white text-pink-600 shadow-md transform scale-105' : 'text-slate-500 hover:text-slate-700'}`}>
                     <Camera size={18} /> Fotos IA
@@ -158,12 +175,8 @@ export default function AiStudioDashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-                {/* PANEL IZQUIERDO: CONTROLES */}
                 <div className="lg:col-span-4 space-y-6">
                     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
-
-                        {/* PASO 1: CATEGORÍA */}
                         <div>
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-3 flex items-center gap-2">
                                 <span className="bg-slate-100 text-slate-600 w-5 h-5 rounded-full flex items-center justify-center">1</span> Categoría
@@ -181,7 +194,6 @@ export default function AiStudioDashboard() {
                             </div>
                         </div>
 
-                        {/* PASO 2: PRODUCTO */}
                         <div className="border-t border-slate-100 pt-6">
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-3 flex items-center gap-2">
                                 <span className="bg-slate-100 text-slate-600 w-5 h-5 rounded-full flex items-center justify-center">2</span> Referencia
@@ -217,7 +229,6 @@ export default function AiStudioDashboard() {
                             )}
                         </div>
 
-                        {/* PASO EXTRA PARA MODA: MODELO HUMANO */}
                         {mode === 'fashion' && (
                             <div className="border-t border-slate-100 pt-6 bg-gradient-to-b from-pink-50/50 to-transparent -mx-6 px-6 pb-2">
                                 <label className="text-xs font-bold text-pink-700 uppercase tracking-widest block mb-3 flex items-center gap-2">
@@ -231,7 +242,6 @@ export default function AiStudioDashboard() {
                             </div>
                         )}
 
-                        {/* PASO 3: DIRECCIÓN DE ARTE */}
                         <div className="border-t border-slate-100 pt-6 space-y-5">
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-2 flex items-center gap-2">
                                 <span className="bg-slate-100 text-slate-600 w-5 h-5 rounded-full flex items-center justify-center">3</span> Dirección de Arte
@@ -239,7 +249,7 @@ export default function AiStudioDashboard() {
 
                             <div>
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Fondo / Ambiente</label>
-                                <textarea rows={2} placeholder="Ej: Estudio fotográfico blanco con sombras suaves" value={paramBackground} onChange={e => setParamBackground(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10 transition-all resize-none" />
+                                <textarea rows={2} placeholder="Ej: Desierto soleado con arena dorada" value={paramBackground} onChange={e => setParamBackground(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10 transition-all resize-none" />
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -293,7 +303,6 @@ export default function AiStudioDashboard() {
                             </div>
                         </div>
 
-                        {/* BOTÓN GENERAR */}
                         <div className="pt-4">
                             <button
                                 onClick={handleGenerate}
@@ -307,13 +316,8 @@ export default function AiStudioDashboard() {
                     </div>
                 </div>
 
-                {/* PANEL DERECHO: RESULTADOS E HISTORIAL */}
                 <div className="lg:col-span-8 space-y-6">
-
-                    {/* RESULTADO ACTUAL */}
                     <div className="bg-[#0B0F19] rounded-3xl border border-slate-800 shadow-2xl overflow-hidden min-h-[450px] flex flex-col relative group">
-
-                        {/* Decoración de fondo tech */}
                         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none"></div>
 
                         {isGenerating ? (
@@ -351,9 +355,14 @@ export default function AiStudioDashboard() {
                                             <p className="flex items-center justify-between"><span className="font-bold text-slate-300">Motor IA:</span> <span className="bg-slate-800 px-2 py-1 rounded text-[10px]">fal.ai</span></p>
                                         </div>
                                     </div>
-                                    <a href={currentResult.url} download target="_blank" className="w-full py-3.5 mt-8 bg-white text-slate-900 rounded-xl font-black text-sm flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors shadow-lg shadow-white/10 active:scale-95">
-                                        <Download size={18} /> Descargar Original
-                                    </a>
+
+                                    {/* BOTÓN DE DESCARGA ARREGLADO */}
+                                    <button
+                                        onClick={(e) => { e.preventDefault(); handleDownload(currentResult.url, activeTab); }}
+                                        className="w-full py-3.5 mt-8 bg-white text-slate-900 rounded-xl font-black text-sm flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors shadow-lg shadow-white/10 active:scale-95"
+                                    >
+                                        <Download size={18} /> Descargar Archivo
+                                    </button>
                                 </div>
                             </div>
                         ) : (
@@ -367,7 +376,6 @@ export default function AiStudioDashboard() {
                         )}
                     </div>
 
-                    {/* HISTORIAL */}
                     <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
                         <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
                             <h2 className="font-bold text-lg flex items-center gap-2 text-slate-800"><History size={20} className="text-indigo-500" /> Tus Creaciones</h2>
@@ -378,7 +386,6 @@ export default function AiStudioDashboard() {
                             {historial.map(h => (
                                 <div key={h.id} className="group relative aspect-square rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => h.status === 'completed' && setCurrentResult({ url: h.result_url, prompt: h.final_ai_prompt })}>
 
-                                    {/* Muestra imagen o si es video un frame (o ícono) */}
                                     {h.result_url?.endsWith('.mp4') ? (
                                         <div className="w-full h-full flex flex-col items-center justify-center bg-slate-800 text-white relative">
                                             <Video size={24} className="opacity-50 mb-2" />
@@ -393,9 +400,10 @@ export default function AiStudioDashboard() {
                                             {h.generation_type}
                                         </span>
                                         {h.status === 'completed' && (
-                                            <a href={h.result_url} target="_blank" className="p-2 bg-white text-slate-900 rounded-full hover:scale-110 transition-transform shadow-lg" onClick={e => e.stopPropagation()}>
+                                            /* BOTÓN DE DESCARGA EN HISTORIAL ARREGLADO */
+                                            <button onClick={(e) => { e.stopPropagation(); handleDownload(h.result_url, h.generation_type); }} className="p-2 bg-white text-slate-900 rounded-full hover:scale-110 transition-transform shadow-lg">
                                                 <Download size={16} />
-                                            </a>
+                                            </button>
                                         )}
                                     </div>
 
