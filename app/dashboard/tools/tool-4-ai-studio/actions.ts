@@ -74,16 +74,16 @@ export async function obtenerHistorialGeneracionesAction() {
 
 export async function generateMediaWithAIAction(payload: any) {
     try {
-        // 1. OBTENER API KEY DE LAS VARIABLES DE ENTORNO
+        // 1. OBTENER API KEY
         const falApiKey = process.env.FAL_KEY;
         if (!falApiKey) {
-            throw new Error("Falta configurar FAL_KEY en las variables de entorno.");
+            throw new Error("Falta configurar FAL_KEY en las variables de entorno de Vercel.");
         }
 
         // 2. REGISTRAR INTENTO EN BD (ESTADO "PROCESSING")
         const generationRecord = {
-            generation_type: payload.type, // 'photo' o 'video'
-            mode: payload.mode, // 'product', 'fashion', 'food'
+            generation_type: payload.type,
+            mode: payload.mode,
             product_ids: payload.productIds || [],
             uploaded_reference_images: payload.uploadedImages || [],
             saved_model_id: payload.savedModelId || null,
@@ -98,12 +98,11 @@ export async function generateMediaWithAIAction(payload: any) {
             .select()
             .single();
 
-        if (dbError) throw new Error("No se pudo iniciar el registro: " + dbError.message);
+        if (dbError) throw new Error("No se pudo iniciar el registro en la base de datos.");
 
         // 3. PREPARAR DATOS DE REFERENCIA
         let imageUrlToProcess = '';
 
-        // Determinar de dónde sacar la imagen de referencia
         if (payload.uploadedImages && payload.uploadedImages.length > 0) {
             imageUrlToProcess = payload.uploadedImages[0];
         } else if (payload.productIds && payload.productIds.length > 0) {
@@ -123,21 +122,18 @@ export async function generateMediaWithAIAction(payload: any) {
         }
 
         if (!imageUrlToProcess) {
-            throw new Error("No se proporcionó una imagen válida para procesar.");
+            throw new Error("No se encontró ninguna imagen válida para enviar a la IA.");
         }
 
-        // 4. CONSTRUCCIÓN DE PROMPT Y CONFIGURACIÓN DE MODELO
+        // 4. CONSTRUCCIÓN DE PROMPT Y CONFIGURACIÓN
         const { background, pose, interaction, extraPrompt, style, duration, aspectRatio } = payload.parameters;
 
         let falEndpoint = '';
         let falRequestBody: any = {};
         let finalPrompt = '';
-        let resultUrl = '';
 
         if (payload.type === 'photo') {
-
             if (payload.mode === 'fashion') {
-                // --- MODO MODA -> Usamos IDM-VTON ---
                 falEndpoint = 'https://queue.fal.run/fal-ai/idm-vton';
 
                 let humanModelUrl = '';
@@ -148,7 +144,7 @@ export async function generateMediaWithAIAction(payload: any) {
                     }
                 }
 
-                if (!humanModelUrl) throw new Error("Falta seleccionar un modelo humano para el modo Moda.");
+                if (!humanModelUrl) throw new Error("Falta seleccionar un modelo humano.");
 
                 finalPrompt = `Fashion photography, ${style} style, ${background}. ${pose}. ${extraPrompt}`;
 
@@ -158,14 +154,10 @@ export async function generateMediaWithAIAction(payload: any) {
                     description: finalPrompt,
                     category: "upper_body"
                 };
-
             } else {
-                // --- MODO PRODUCTO/COMIDA -> Usamos FLUX ---
-                falEndpoint = 'https://queue.fal.run/fal-ai/flux-pro/v1.1/image-to-image';
+                falEndpoint = 'https://queue.fal.run/fal-ai/flux/dev/image-to-image';
 
-                finalPrompt = `Professional photography of a product. `;
-                if (payload.mode === 'food') finalPrompt = `Professional food photography, appetizing, fresh. `;
-
+                finalPrompt = payload.mode === 'food' ? `Professional food photography, appetizing, fresh. ` : `Professional photography of a product. `;
                 finalPrompt += `Set in a ${background} background. `;
                 if (interaction) finalPrompt += `${interaction}. `;
                 if (pose) finalPrompt += `Positioned ${pose}. `;
@@ -177,10 +169,8 @@ export async function generateMediaWithAIAction(payload: any) {
                     strength: 0.85
                 };
             }
-
         } else if (payload.type === 'video') {
-            // --- MODO VIDEO -> Usamos Kling ---
-            falEndpoint = 'https://queue.fal.run/fal-ai/kling-video/v1.6/pro/image-to-video';
+            falEndpoint = 'https://queue.fal.run/fal-ai/kling-video/v1/standard/image-to-video';
 
             finalPrompt = `Cinematic video shot. `;
             if (payload.mode === 'food') finalPrompt = `Cinematic food commercial. `;
@@ -198,84 +188,95 @@ export async function generateMediaWithAIAction(payload: any) {
             };
         }
 
-        // 5. LLAMADA A FAL.AI (USANDO COLA DE TAREAS)
-
-        // Paso A: Enviar la tarea a la cola
+        // 5. LLAMADA A FAL.AI (USANDO CACHE: NO-STORE PARA EVITAR BUGS DE NEXTJS)
         const submitResponse = await fetch(falEndpoint, {
             method: 'POST',
             headers: {
                 'Authorization': `Key ${falApiKey}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(falRequestBody)
+            body: JSON.stringify(falRequestBody),
+            cache: 'no-store' // CRÍTICO: Obliga a no usar caché
         });
 
         if (!submitResponse.ok) {
             const errorData = await submitResponse.text();
-            throw new Error(`Error de la API de IA (Submit): ${submitResponse.status} ${errorData}`);
+            throw new Error(`FAL API RECHAZÓ LA SOLICITUD: ${errorData}`);
         }
 
         const submitData = await submitResponse.json();
-
-        // FIX: Usar directamente las URLs dinámicas de Fal.ai para consultar progreso
         const statusUrl = submitData.status_url;
         const responseUrl = submitData.response_url;
 
         if (!statusUrl || !responseUrl) {
-            throw new Error("No se recibieron las URLs de progreso de Fal.ai");
+            throw new Error(`FAL API devolvió una respuesta incompleta: ${JSON.stringify(submitData)}`);
         }
 
-        // Paso B: Polling (Preguntar cada 2 segundos si ya terminó)
+        // Polling con no-store
         let status = 'IN_QUEUE';
         let attempts = 0;
         const maxAttempts = 60; // 2 minutos máximo
 
         while (status !== 'COMPLETED' && status !== 'FAILED' && attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Esperar 2 segundos
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
             const statusResponse = await fetch(statusUrl, {
-                headers: { 'Authorization': `Key ${falApiKey}` }
+                headers: { 'Authorization': `Key ${falApiKey}` },
+                cache: 'no-store'
             });
 
             if (statusResponse.ok) {
                 const statusJson = await statusResponse.json();
                 status = statusJson.status;
             } else {
-                console.log("Error haciendo polling de estado...");
+                const errText = await statusResponse.text();
+                throw new Error(`Error consultando estado a FAL: ${errText}`);
             }
             attempts++;
         }
 
-        if (status !== 'COMPLETED') {
-            throw new Error("La generación falló o superó el tiempo máximo de espera.");
+        if (status === 'FAILED') {
+            const failResponse = await fetch(responseUrl, {
+                headers: { 'Authorization': `Key ${falApiKey}` },
+                cache: 'no-store'
+            });
+            const failData = await failResponse.text();
+            throw new Error(`La IA falló internamente al procesar la imagen. Razón: ${failData}`);
         }
 
-        // Paso C: Traer el archivo final generado
+        if (status !== 'COMPLETED') {
+            throw new Error("Tiempo de espera agotado (Timeout).");
+        }
+
+        // Traer el archivo final
         const resultResponse = await fetch(responseUrl, {
-            headers: { 'Authorization': `Key ${falApiKey}` }
+            headers: { 'Authorization': `Key ${falApiKey}`, 'Accept': 'application/json' },
+            cache: 'no-store'
         });
 
         if (!resultResponse.ok) {
-            throw new Error("No se pudo obtener el archivo final de la IA.");
+            const errorData = await resultResponse.text();
+            throw new Error(`Error descargando resultado de FAL: ${errorData}`);
         }
 
         const resultJson = await resultResponse.json();
 
-        // Extraer la URL según el formato de la IA
+        // Extraer la URL
+        let resultUrl = '';
         if (payload.type === 'photo' && payload.mode === 'fashion') {
             resultUrl = resultJson.image?.url || resultJson.images?.[0]?.url;
         } else if (payload.type === 'photo') {
-            resultUrl = resultJson.images?.[0]?.url;
+            resultUrl = resultJson.images?.[0]?.url || resultJson.image?.url;
         } else if (payload.type === 'video') {
             resultUrl = resultJson.video?.url;
         }
 
         if (!resultUrl) {
-            throw new Error("La IA no devolvió una URL válida del archivo generado.");
+            throw new Error(`La IA no devolvió un archivo multimedia válido. Respuesta: ${JSON.stringify(resultJson)}`);
         }
 
-        // 6. ACTUALIZAMOS LA BASE DE DATOS CON EL RESULTADO FINAL
-        const { error: updateError } = await supabase
+        // 6. ACTUALIZAMOS LA BASE DE DATOS
+        await supabase
             .from('ai_media_generations')
             .update({
                 status: 'completed',
@@ -283,8 +284,6 @@ export async function generateMediaWithAIAction(payload: any) {
                 result_url: resultUrl
             })
             .eq('id', dbRecord.id);
-
-        if (updateError) throw new Error("Error al guardar el resultado en BD: " + updateError.message);
 
         revalidatePath('/dashboard/tools/tool-4-ai-studio');
 
@@ -295,6 +294,11 @@ export async function generateMediaWithAIAction(payload: any) {
 
     } catch (error: any) {
         console.error("AI Gen Error:", error);
+
+        if (payload.id_temporal_db) {
+            await supabase.from('ai_media_generations').update({ status: 'failed', error_message: error.message }).eq('id', payload.id_temporal_db);
+        }
+
         return { success: false, error: error.message };
     }
 }
