@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Save, UploadCloud, Plus, Trash2, Tag, Image as ImageIcon, Link as LinkIcon, Info, ListTree, Loader2, PlusCircle } from 'lucide-react';
+import { ArrowLeft, Save, UploadCloud, Plus, Trash2, Tag, Image as ImageIcon, Link as LinkIcon, Info, ListTree, Loader2, PlusCircle, Bot } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { updateProductAction, uploadImageAction } from '../../actions';
 
@@ -14,6 +14,7 @@ export default function EditarProductoUniversal() {
     const [loadingPage, setLoadingPage] = useState(true);
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [uploadingInternal, setUploadingInternal] = useState(false);
     const [errorStatus, setErrorStatus] = useState<string | null>(null);
 
     const [nombre, setNombre] = useState('');
@@ -27,6 +28,7 @@ export default function EditarProductoUniversal() {
     const [atributos, setAtributos] = useState<any[]>([]);
     const [variantes, setVariantes] = useState<any[]>([]);
     const [imageUrls, setImageUrls] = useState<string[]>([]);
+    const [internalImages, setInternalImages] = useState<string[]>([]); // NUEVO
     const [preciosExtra, setPreciosExtra] = useState<{ id: number, nombre: string, valor: string }[]>([]);
     const [showOwnerLogo, setShowOwnerLogo] = useState(true);
 
@@ -42,7 +44,9 @@ export default function EditarProductoUniversal() {
             setNombre(data.name); setSku(data.sku || ''); setCategoria(data.category || ''); setDescripcion(data.description || '');
             setPrecioLista(data.price_installments?.toString() || ''); setPrecioEfectivo(data.price_cash?.toString() || '');
             setLinkExterno(data.external_link || '');
-            setAtributos(data.technical_specs || []); setVariantes(data.variants_config || []); setImageUrls(data.image_urls || []);
+            setAtributos(data.technical_specs || []); setVariantes(data.variants_config || []);
+            setImageUrls(data.image_urls || []);
+            setInternalImages(data.internal_reference_images || []); // NUEVO
 
             const extras = [];
             if (data.custom_price_1_name) extras.push({ id: 1, nombre: data.custom_price_1_name, valor: data.custom_price_1_value?.toString() || '' });
@@ -66,6 +70,21 @@ export default function EditarProductoUniversal() {
     };
 
     const eliminarImagen = (url: string) => setImageUrls(imageUrls.filter(img => img !== url));
+
+    // NUEVO: Handler interno
+    const handleUploadInternalImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingInternal(true);
+        const formData = new FormData(); formData.append('file', file);
+        const res = await uploadImageAction(formData);
+        if (res.success && res.url) setInternalImages(prev => [...prev, res.url]);
+        else alert("Error al subir imagen interna: " + res.error);
+        setUploadingInternal(false);
+    };
+
+    const eliminarImagenInterna = (url: string) => setInternalImages(internalImages.filter(img => img !== url));
+
     const agregarAtributo = () => setAtributos([...atributos, { id: Date.now(), clave: '', valor: '' }]);
     const actualizarAtributo = (idAt: number, campo: string, val: string) => setAtributos(atributos.map(a => a.id === idAt ? { ...a, [campo]: val } : a));
     const agregarVariante = () => setVariantes([...variantes, { id: Date.now(), nombre: '', valores: '' }]);
@@ -81,6 +100,7 @@ export default function EditarProductoUniversal() {
             price_cash: parseFloat(precioEfectivo) || 0, price_installments: parseFloat(precioLista) || 0,
             technical_specs: atributos.filter(a => a.clave && a.valor), variants_config: variantes.filter(v => v.nombre && v.valores),
             external_link: linkExterno, image_urls: imageUrls,
+            internal_reference_images: internalImages, // NUEVO
             custom_price_1_name: preciosExtra[0]?.nombre || null, custom_price_1_value: parseFloat(preciosExtra[0]?.valor) || null,
             custom_price_2_name: preciosExtra[1]?.nombre || null, custom_price_2_value: parseFloat(preciosExtra[1]?.valor) || null,
             show_owner_logo_this_product: showOwnerLogo
@@ -127,7 +147,6 @@ export default function EditarProductoUniversal() {
                         <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Info size={20} className="text-indigo-500" /> Ficha Técnica</h2>
                         <div className="space-y-3">
                             {atributos.map((at: any) => (
-                                /* CORRECCIÓN: items-center en celular */
                                 <div key={at.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 sm:border-none sm:bg-transparent sm:p-0 group">
                                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 w-full">
                                         <input placeholder="Ej: Marca" value={at.clave} onChange={e => actualizarAtributo(at.id, 'clave', e.target.value)} className="w-full px-3 py-2 bg-white sm:bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:border-indigo-500" />
@@ -161,7 +180,7 @@ export default function EditarProductoUniversal() {
 
                 <div className="space-y-6">
                     <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm text-slate-800">
-                        <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><ImageIcon size={20} className="text-indigo-500" /> Multimedia y Links</h2>
+                        <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><ImageIcon size={20} className="text-indigo-500" /> Multimedia Pública</h2>
                         <div className="mb-4">
                             <label className="block text-sm font-semibold text-slate-700 mb-2">Fotos Locales (Hasta 5)</label>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -187,8 +206,32 @@ export default function EditarProductoUniversal() {
                         </div>
                     </div>
 
+                    {/* NUEVA SECCIÓN: FOTOS INTERNAS IA */}
+                    <div className="bg-pink-50/50 p-5 md:p-6 rounded-2xl border border-pink-100 shadow-sm text-slate-800">
+                        <h2 className="text-lg font-bold mb-2 flex items-center gap-2 text-pink-700"><Bot size={20} /> Referencias IA (Internas)</h2>
+                        <p className="text-xs text-pink-600/80 mb-4">Estas fotos NO las ve el cliente. Se usan exclusivamente en la Tool 4 para generar sesiones de fotos y videos con IA.</p>
+                        <div className="mb-4">
+                            <label className="block text-sm font-semibold text-slate-700 mb-2">Fotos Internas (Hasta 4)</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {internalImages.map((url, i) => (
+                                    <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-pink-200">
+                                        <img src={url} className="w-full h-full object-cover" alt="Referencia interna" />
+                                        <button onClick={() => eliminarImagenInterna(url)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full shadow-sm"><Trash2 size={12} /></button>
+                                    </div>
+                                ))}
+                                {internalImages.length < 4 && (
+                                    <label className="aspect-square border-2 border-dashed border-pink-300 bg-white rounded-lg flex flex-col items-center justify-center text-pink-400 cursor-pointer hover:bg-pink-50 hover:border-pink-500 hover:text-pink-600 transition-colors">
+                                        {uploadingInternal ? <Loader2 className="animate-spin" size={20} /> : <Plus size={20} />}
+                                        <span className="text-[10px] font-bold mt-1 uppercase">Subir Ref</span>
+                                        <input type="file" className="hidden" onChange={handleUploadInternalImage} accept="image/*" />
+                                    </label>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h2 className="text-lg font-bold mb-4 text-slate-800 flex items-center gap-2"><Tag size={20} className="text-indigo-500" /> Precios</h2>
+                        <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Tag size={20} className="text-indigo-500" /> Precios</h2>
                         <div className="space-y-4">
                             <div>
                                 <label className="text-xs font-bold text-slate-500">LISTA / TARJETA</label>

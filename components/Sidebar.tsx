@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, QrCode, Settings, LogOut, Box, Package, Menu, X, BookOpen } from 'lucide-react';
+import { LayoutDashboard, QrCode, Settings, LogOut, Box, Package, Menu, X, BookOpen, Sparkles } from 'lucide-react';
 
 export default function Sidebar() {
     const pathname = usePathname();
@@ -29,7 +29,6 @@ export default function Sidebar() {
                 />
             )}
 
-            {/* CORRECCIÓN: h-[100dvh] en vez de min-h-screen */}
             <div className={`fixed inset-y-0 left-0 z-50 w-64 h-[100dvh] bg-slate-900 text-slate-300 flex flex-col font-sans shrink-0 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
                 <div className="h-20 flex items-center justify-between px-8 border-b border-slate-800 shrink-0">
                     <h1 className="text-2xl font-bold text-white tracking-tight">Simplik<span className="text-indigo-500">.</span></h1>
@@ -60,10 +59,15 @@ export default function Sidebar() {
                                 <span className="font-medium">Comandas Internas</span>
                             </Link>
 
-                            {/* NUEVO: TOOL 3 - CATÁLOGOS 3D */}
                             <Link href="/dashboard/tools/tool-3-catalogos" onClick={() => setIsOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 transition-colors border border-violet-500/20">
                                 <BookOpen size={20} />
                                 <span className="font-medium">Catálogos 3D</span>
+                            </Link>
+
+                            {/* NUEVA: TOOL 4 - ESTUDIO IA */}
+                            <Link href="/dashboard/tools/tool-4-ai-studio" onClick={() => setIsOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg bg-pink-500/10 text-pink-400 hover:bg-pink-500/20 transition-colors border border-pink-500/20">
+                                <Sparkles size={20} />
+                                <span className="font-medium">Estudio IA</span>
                             </Link>
                         </div>
 

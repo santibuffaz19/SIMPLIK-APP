@@ -2,16 +2,14 @@
 
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Building2, QrCode, ArrowRight, ArrowLeft, Package, BookOpen } from 'lucide-react';
+import { Building2, QrCode, ArrowRight, ArrowLeft, Package, BookOpen, Sparkles } from 'lucide-react';
 import { Suspense } from 'react';
 
 function ConfiguracionContent() {
     const searchParams = useSearchParams();
 
-    // Leemos de dónde viene.
     let fromParam = searchParams.get('from');
 
-    // Armamos una URL de regreso blindada
     let backUrl = '/dashboard';
     if (fromParam) {
         if (fromParam.startsWith('/')) {
@@ -21,7 +19,6 @@ function ConfiguracionContent() {
         }
     }
 
-    // ESCUDO ANTI-BUCLES
     if (backUrl.includes('/configuracion')) {
         backUrl = '/dashboard';
     }
@@ -83,7 +80,6 @@ function ConfiguracionContent() {
                     </div>
                 </Link>
 
-                {/* TOOL 3 CONFIG (NUEVA) */}
                 <Link href="/dashboard/tools/tool-3-catalogos/configuracion" className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all group flex flex-col h-full">
                     <div className="bg-violet-50 w-14 h-14 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                         <BookOpen size={28} className="text-violet-600" />
@@ -93,6 +89,20 @@ function ConfiguracionContent() {
                         Estilos por defecto, marcas de agua y preferencias visuales de tus Lookbooks.
                     </p>
                     <div className="mt-auto flex items-center gap-2 text-violet-600 font-black text-sm uppercase tracking-widest">
+                        Configurar <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                    </div>
+                </Link>
+
+                {/* NUEVA: CONFIG TOOL 4 */}
+                <Link href="/dashboard/tools/tool-4-ai-studio/configuracion" className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all group flex flex-col h-full">
+                    <div className="bg-pink-50 w-14 h-14 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <Sparkles size={28} className="text-pink-600" />
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-900 mb-2">Estudio IA</h2>
+                    <p className="text-sm text-slate-500 mb-6 flex-1">
+                        Modelos humanos guardados, API keys, estilos predefinidos y ajustes de generación.
+                    </p>
+                    <div className="mt-auto flex items-center gap-2 text-pink-600 font-black text-sm uppercase tracking-widest">
                         Configurar <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                     </div>
                 </Link>
