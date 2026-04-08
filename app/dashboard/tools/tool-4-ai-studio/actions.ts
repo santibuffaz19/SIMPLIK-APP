@@ -155,18 +155,26 @@ export async function generateMediaWithAIAction(payload: any) {
                     category: "upper_body"
                 };
             } else {
+                // MODO PRODUCTO/COMIDA -> Usamos FLUX DEV IMAGE-TO-IMAGE
                 falEndpoint = 'https://queue.fal.run/fal-ai/flux/dev/image-to-image';
 
-                finalPrompt = payload.mode === 'food' ? `Professional food photography, appetizing, fresh. ` : `Professional photography of a product. `;
-                finalPrompt += `Set in a ${background} background. `;
+                // MEJORA DEL PROMPT PARA PRIORIZAR IDENTIDAD
+                finalPrompt = `Professional photo taken with a DSLR camera. altamente detallado, nítido, photorealistic. `;
+                if (payload.mode === 'food') finalPrompt = `Professional appetizing food photography, fresh. `;
+
+                finalPrompt += `The product object (geometry, handle, cap, logos, texture, exact shape) must be strictly preserved from the original image and remain identical without any distortion. `;
+                finalPrompt += `The background environment is: ${background}. `;
                 if (interaction) finalPrompt += `${interaction}. `;
                 if (pose) finalPrompt += `Positioned ${pose}. `;
-                finalPrompt += `Style: ${style}. Extra details: ${extraPrompt}. highly detailed, 8k, photorealistic.`;
+                finalPrompt += `Style: ${style}. Extra details: ${extraPrompt}.`;
 
                 falRequestBody = {
                     image_url: imageUrlToProcess,
                     prompt: finalPrompt,
-                    strength: 0.85
+                    // SOLUCIÓN: Strength muy bajo para preservar identidad del producto
+                    // La IA tiene solo 30% libertad para cambiar, el resto es la original intacta.
+                    strength: 0.3,
+                    num_inference_steps: 40 // Más pasos para mejorar nitidez
                 };
             }
         } else if (payload.type === 'video') {
@@ -178,7 +186,7 @@ export async function generateMediaWithAIAction(payload: any) {
 
             finalPrompt += `Environment: ${background}. `;
             if (interaction) finalPrompt += `Action: ${interaction}. `;
-            finalPrompt += `Style: ${style}. ${extraPrompt}. Smooth camera movement.`;
+            finalPrompt += `Style: ${style}. ${extraPrompt}. Smooth camera movement. The product in the video must look exactly like the input product without any changes.`;
 
             falRequestBody = {
                 image_url: imageUrlToProcess,
@@ -196,7 +204,7 @@ export async function generateMediaWithAIAction(payload: any) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(falRequestBody),
-            cache: 'no-store' // CRÍTICO: Obliga a no usar caché
+            cache: 'no-store'
         });
 
         if (!submitResponse.ok) {
@@ -294,11 +302,6 @@ export async function generateMediaWithAIAction(payload: any) {
 
     } catch (error: any) {
         console.error("AI Gen Error:", error);
-
-        if (payload.id_temporal_db) {
-            await supabase.from('ai_media_generations').update({ status: 'failed', error_message: error.message }).eq('id', payload.id_temporal_db);
-        }
-
         return { success: false, error: error.message };
     }
 }
