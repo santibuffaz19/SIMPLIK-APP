@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Camera, Video, Image as ImageIcon, Settings, Loader2, Sparkles, UserCircle, Upload, ChevronRight, History, Download, RefreshCw, ShoppingBag, Shirt, Utensils, AlertCircle } from 'lucide-react';
+import { Camera, Video, Image as ImageIcon, Settings, Loader2, Sparkles, UserCircle, Upload, ChevronRight, History, Download, RefreshCw, ShoppingBag, Shirt, Utensils, AlertCircle, X } from 'lucide-react';
 import { obtenerProductosParaAIAction, obtenerModelosGuardadosAction, generateMediaWithAIAction, obtenerHistorialGeneracionesAction } from './actions';
 // Ajustá esta ruta si tu actions de Tool 1 está en otra carpeta
 import { uploadImageAction } from '../tool-1-QR/actions';
@@ -332,7 +332,6 @@ export default function AiStudioDashboard() {
                         ) : currentResult ? (
                             <div className="flex-1 flex flex-col md:flex-row relative z-10">
                                 <div className="flex-1 p-6 md:p-10 flex items-center justify-center bg-black/40">
-                                    {/* Si es video se vería acá, si es imagen se ve img */}
                                     {currentResult.url?.endsWith('.mp4') ? (
                                         <video src={currentResult.url} controls autoPlay loop className="max-w-full max-h-[550px] rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/10" />
                                     ) : (
