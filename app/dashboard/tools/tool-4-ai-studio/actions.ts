@@ -4,9 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
 
 // ─────────────────────────────────────────────────────────────
-// PIPELINES DISPONIBLES
-// Cada pipeline sabe cómo construir su prompt y qué modelo usar.
-// Agregar nuevos pipelines aquí sin tocar la UI.
+// TIPOS Y PIPELINES
 // ─────────────────────────────────────────────────────────────
 export type Pipeline =
     | 'product_photo'
@@ -19,199 +17,239 @@ export type Pipeline =
 export type GenerationStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 // ─────────────────────────────────────────────────────────────
-// BUILDERS DE PROMPT POR PIPELINE
-// Construyen el prompt textual final a partir de los parámetros.
+// HELPER: lee la API key del nombre CORRECTO de la variable
+// En .env.local: FAL_KEY  (NO FAL_API_KEY)
+// ─────────────────────────────────────────────────────────────
+function getFalKey(): string | null {
+    return process.env.FAL_KEY || process.env.FAL_API_KEY || null;
+}
+
+// ─────────────────────────────────────────────────────────────
+// BUILDER DE PROMPT FOTO
+// Construye un prompt detallado priorizando fidelidad al producto
 // ─────────────────────────────────────────────────────────────
 function buildPhotoPrompt(params: any, pipeline: Pipeline): string {
     const parts: string[] = [];
 
-    // Base por tipo de pipeline
     if (pipeline === 'product_photo') {
-        parts.push('Professional product photography, studio quality');
-        if (params.productName) parts.push(`of "${params.productName}"`);
+        parts.push('Professional commercial product photography');
+        if (params.productName) {
+            parts.push(`The exact product is: ${params.productName}. Preserve all product details, colors, textures, labels, and branding exactly as they appear in the reference image`);
+        }
     } else if (pipeline === 'fashion_photo') {
-        parts.push('Professional fashion photography, editorial quality');
-        if (params.productName) parts.push(`featuring "${params.productName}"`);
-        if (params.modelDescription) parts.push(`on a model: ${params.modelDescription}`);
+        parts.push('Professional fashion editorial photography');
+        if (params.productName) {
+            parts.push(`The garment/product featured is: ${params.productName}. Preserve fabric texture, color, pattern, logo placement, and all design details exactly`);
+        }
+        if (params.modelDescription) parts.push(`worn by: ${params.modelDescription}`);
     } else if (pipeline === 'food_photo') {
-        parts.push('Professional food photography, appetizing and vibrant');
-        if (params.productName) parts.push(`of "${params.productName}"`);
+        parts.push('Professional food photography, appetizing, vibrant colors');
+        if (params.productName) {
+            parts.push(`The dish/product is: ${params.productName}. Preserve the exact appearance, colors, textures and presentation`);
+        }
     }
 
     // Fondo
+    const bgMap: Record<string, string> = {
+        beach: 'sunny tropical beach setting, natural light, sand and sea visible',
+        space: 'dramatic outer space background, stars, nebula',
+        white_studio: 'pure clean white studio backdrop, professional soft lighting',
+        black_studio: 'sleek matte black studio backdrop, dramatic lighting',
+        wooden_table: 'rustic warm wooden surface, natural textures',
+        modern_kitchen: 'modern minimalist kitchen interior, soft natural light',
+        elegant_office: 'elegant executive office environment, bokeh background',
+        ecommerce_premium: 'pure white seamless background perfect for e-commerce, even soft shadows',
+        lifestyle: 'bright airy lifestyle setting, natural daylight, lived-in feel',
+        minimalist: 'ultra-clean minimal background, subtle gradient, pure aesthetic',
+        advertising: 'bold commercial advertising composition, dynamic staging',
+        storefront: 'premium retail window display, glass reflections',
+        urban_street: 'urban street photography, city environment, concrete textures',
+        editorial_studio: 'high-fashion editorial studio, dramatic shadows',
+        rooftop: 'rooftop terrace with panoramic city skyline at golden hour',
+        modern_cafe: 'stylish contemporary café interior, warm ambient lighting',
+        pasarela: 'fashion runway, professional catwalk lighting',
+        gastronomic: 'fine dining restaurant setting, atmospheric lighting',
+    };
+
     if (params.backgroundType === 'preset' && params.backgroundPreset) {
-        const bgMap: Record<string, string> = {
-            beach: 'on a sunny beach background',
-            space: 'with a dramatic outer space background',
-            white_studio: 'on a clean white studio background',
-            black_studio: 'on a sleek black studio background',
-            wooden_table: 'on a rustic wooden table surface',
-            modern_kitchen: 'in a modern kitchen setting',
-            elegant_office: 'in an elegant office environment',
-            ecommerce_premium: 'on a premium e-commerce white background, perfect for online store',
-            lifestyle: 'in a lifestyle setting',
-            minimalist: 'on a clean minimalist background',
-            advertising: 'in a professional advertising composition',
-            storefront: 'in a modern retail storefront display',
-            urban_street: 'on an urban city street',
-            editorial_studio: 'in an editorial fashion studio',
-            rooftop: 'on a rooftop terrace with city views',
-            modern_cafe: 'in a stylish modern café',
-            pasarela: 'on a fashion runway',
-            gastronomic: 'in a fine dining gastronomic setting',
-        };
-        const bgText = bgMap[params.backgroundPreset] || `with background: ${params.backgroundPreset}`;
-        parts.push(bgText);
+        parts.push(bgMap[params.backgroundPreset] || `background: ${params.backgroundPreset}`);
     } else if (params.backgroundType === 'color' && params.backgroundColor) {
-        parts.push(`on a ${params.backgroundColor} background`);
+        parts.push(`solid ${params.backgroundColor} colored background`);
     } else if (params.backgroundType === 'prompt' && params.backgroundPrompt) {
-        parts.push(`in a setting described as: ${params.backgroundPrompt}`);
+        parts.push(`background setting: ${params.backgroundPrompt}`);
     }
 
     // Pose / composición
+    const poseMap: Record<string, string> = {
+        centered_front: 'perfectly centered front-facing composition, symmetric',
+        three_quarters: 'three-quarter angle, slight depth perspective',
+        tilted: 'dynamic slightly tilted angle, editorial feel',
+        on_table: 'product resting naturally on a surface, tabletop photography',
+        floating: 'product floating suspended in air, levitation effect, dynamic',
+        in_use: 'product shown actively in use, lifestyle context',
+        close_up: 'extreme close-up macro detail shot, texture emphasis',
+        advertising: 'wide hero advertising shot, dramatic composition',
+        macro: 'extreme macro photography, microscopic texture detail',
+        still_life: 'classic elegant still life arrangement with props',
+        standing_front: 'model standing tall, facing camera directly, full body',
+        walking: 'model mid-stride, natural movement, candid energy',
+        sitting: 'model seated casually, relaxed natural pose',
+        turned_three_quarters: 'model turned 3/4 profile, classic editorial angle',
+        back_pose: 'model facing away from camera, showing back of garment',
+        editorial_pose: 'high fashion editorial pose, avant-garde, strong',
+        urban_pose: 'casual street style pose, relaxed urban energy',
+        sports_pose: 'dynamic athletic movement pose, high energy',
+    };
+
     if (params.pose) {
-        const poseMap: Record<string, string> = {
-            centered_front: 'centered front view composition',
-            three_quarters: 'three-quarter angle composition',
-            tilted: 'slightly tilted dynamic angle',
-            on_table: 'resting on a surface',
-            floating: 'floating/suspended in air',
-            in_use: 'shown in use',
-            close_up: 'close-up detail shot',
-            advertising: 'advertising hero shot composition',
-            macro: 'extreme macro detail shot',
-            still_life: 'elegant still life arrangement',
-            standing_front: 'model standing facing camera',
-            walking: 'model walking naturally',
-            sitting: 'model sitting casually',
-            turned_three_quarters: 'model turned three-quarters',
-            back_pose: 'model showing back view',
-            editorial_pose: 'editorial fashion pose',
-            urban_pose: 'casual urban pose',
-            sports_pose: 'dynamic sports pose',
-        };
-        const poseText = poseMap[params.pose] || params.pose;
-        parts.push(poseText);
+        parts.push(poseMap[params.pose] || params.pose);
     }
 
-    // Interacción
     if (params.interactionPrompt) {
-        parts.push(params.interactionPrompt);
+        parts.push(`scene context: ${params.interactionPrompt}`);
     }
 
     // Estilo visual
+    const styleMap: Record<string, string> = {
+        ecommerce: 'clean e-commerce product shot, isolated subject, commercial clarity',
+        editorial: 'high fashion editorial style, artistic direction, magazine quality',
+        lifestyle: 'authentic lifestyle photography, natural light, relatable',
+        streetwear: 'streetwear urban aesthetic, raw edgy energy, authentic',
+        premium: 'ultra-premium luxury brand aesthetic, refined sophistication',
+        sports: 'high-energy sports photography, motion blur, athletic power',
+        casual: 'casual everyday real-life photography, approachable warm',
+        luxury: 'ultra-luxury opulent brand photography, gold tones, exclusive',
+        brand_campaign: 'aspirational brand campaign imagery, emotional storytelling',
+        advertising_product: 'polished commercial advertising photography, bold',
+        cinematic: 'cinematic film photography, dramatic moody lighting, depth',
+        minimalist: 'ultra-minimalist composition, negative space, refined',
+        hyperrealistic: 'hyperrealistic photography, extreme detail, indistinguishable from real',
+        food_premium: 'Michelin-star food photography, artistic plating, gourmet',
+        food_delivery: 'bright fresh food photography, appetizing appeal, vibrant',
+    };
+
     if (params.style) {
-        const styleMap: Record<string, string> = {
-            ecommerce: 'clean e-commerce style, white background, product centered',
-            editorial: 'editorial magazine style, high contrast, artistic',
-            lifestyle: 'lifestyle photography, natural light, authentic feel',
-            streetwear: 'streetwear aesthetic, urban, edgy',
-            premium: 'premium luxury brand aesthetic, sophisticated',
-            sports: 'dynamic sports photography, energetic',
-            casual: 'casual everyday lifestyle photography',
-            luxury: 'ultra-luxury brand photography, opulent details',
-            brand_campaign: 'clean brand campaign photography, aspirational',
-            advertising_product: 'commercial advertising photography, polished',
-            cinematic: 'cinematic photography style, dramatic lighting',
-            minimalist: 'minimalist photography, clean lines, negative space',
-            hyperrealistic: 'hyperrealistic photography, extreme detail',
-            food_premium: 'fine dining food photography, appetizing, gourmet',
-            food_delivery: 'fresh food delivery photography, bright and appetizing',
-        };
         parts.push(styleMap[params.style] || params.style);
     }
 
-    // Extras visuales
     if (params.extraPrompt) {
         parts.push(params.extraPrompt);
     }
 
-    // Calidad base siempre al final
-    parts.push('8K resolution, ultra high quality, photorealistic, sharp focus, professional lighting, commercial photography');
+    // Calidad y técnica — siempre al final
+    parts.push('professional DSLR photography, 8K ultra resolution, perfect focus, commercial grade lighting, award-winning photography');
 
-    return parts.join(', ');
+    return parts.join('. ');
 }
 
+// ─────────────────────────────────────────────────────────────
+// BUILDER DE PROMPT VIDEO
+// ─────────────────────────────────────────────────────────────
 function buildVideoPrompt(params: any, pipeline: Pipeline): string {
     const parts: string[] = [];
 
     if (pipeline === 'product_video') {
-        parts.push('Professional product commercial video');
-        if (params.productName) parts.push(`showcasing "${params.productName}"`);
+        parts.push('Professional product commercial video clip');
+        if (params.productName) parts.push(`showcasing ${params.productName} product, preserving exact product appearance and branding`);
     } else if (pipeline === 'fashion_video') {
         parts.push('Professional fashion lookbook video');
-        if (params.productName) parts.push(`featuring "${params.productName}"`);
+        if (params.productName) parts.push(`featuring ${params.productName} garment, showing fabric movement and design details`);
         if (params.modelDescription) parts.push(`worn by ${params.modelDescription}`);
     } else if (pipeline === 'food_video') {
-        parts.push('Professional food advertising video');
-        if (params.productName) parts.push(`of "${params.productName}"`);
+        parts.push('Professional food advertising video clip');
+        if (params.productName) parts.push(`of ${params.productName}, appetizing presentation`);
     }
 
     if (params.backgroundPreset) parts.push(`background: ${params.backgroundPreset}`);
     if (params.backgroundPrompt) parts.push(params.backgroundPrompt);
     if (params.interactionPrompt) parts.push(params.interactionPrompt);
 
+    const motionMap: Record<string, string> = {
+        zoom_in: 'slow cinematic zoom in toward subject',
+        zoom_out: 'smooth pull-back zoom out reveal',
+        pan_left: 'smooth lateral pan left across scene',
+        pan_right: 'smooth lateral pan right across scene',
+        orbit_360: 'elegant 360 degree orbit around subject',
+        cinematic_approach: 'cinematic dolly push forward approach',
+        macro_detail: 'macro close-up detail movement, texture exploration',
+        static_ambient: 'static locked camera with ambient particle movement',
+    };
+
     if (params.cameraMotion) {
-        const motionMap: Record<string, string> = {
-            zoom_in: 'slow cinematic zoom in',
-            zoom_out: 'smooth zoom out',
-            pan_left: 'lateral pan left',
-            pan_right: 'lateral pan right',
-            orbit_360: '360 degree orbit around product',
-            cinematic_approach: 'cinematic dolly approach',
-            macro_detail: 'macro detail close-up movement',
-            static_ambient: 'static camera with ambient movement',
-        };
         parts.push(motionMap[params.cameraMotion] || params.cameraMotion);
     }
 
-    if (params.style) parts.push(`${params.style} aesthetic`);
+    if (params.style) parts.push(`${params.style} visual style`);
     if (params.extraPrompt) parts.push(params.extraPrompt);
 
-    parts.push('cinematic quality, smooth motion, professional commercial video');
+    parts.push('cinematic quality, smooth motion, professional color grading, commercial production value');
 
     return parts.join(', ');
 }
 
 // ─────────────────────────────────────────────────────────────
-// FAL.AI SERVICE - IMAGE GENERATION
-// Documentación: https://fal.ai/models/fal-ai/flux/dev
+// FAL.AI - GENERACIÓN DE IMAGEN
+//
+// Modelo elegido: fal-ai/flux/dev (text-to-image, barato y bueno)
+// Con referencias: fal-ai/flux-lora (image conditioning vía LoRA)
+// Para fidelidad máxima al producto: fal-ai/creative-upscaler
+//
+// Estrategia precio/calidad:
+// - SIN referencias: flux/dev → ~$0.003/imagen, muy buena calidad
+// - CON referencias: flux-pro/new → ~$0.05/imagen, alta fidelidad
+// - Alternativa económica con ref: recraft-v3 → ~$0.01/imagen
 // ─────────────────────────────────────────────────────────────
 async function callFalImageGeneration(params: {
     prompt: string;
     referenceImageUrls: string[];
     aspectRatio?: string;
 }): Promise<{ success: boolean; outputUrl?: string; requestId?: string; error?: string }> {
-    const FAL_KEY = process.env.FAL_API_KEY;
+    const FAL_KEY = getFalKey();
     if (!FAL_KEY) {
-        return { success: false, error: 'FAL_API_KEY no configurada en variables de entorno.' };
+        return { success: false, error: 'FAL_KEY no configurada. Agregala en Vercel como variable de entorno.' };
     }
 
     try {
-        const hasReferenceImages = params.referenceImageUrls.length > 0;
+        const hasReferenceImages = params.referenceImageUrls.filter(u => u && u.startsWith('http')).length > 0;
+        const cleanRefs = params.referenceImageUrls.filter(u => u && u.startsWith('http'));
 
-        // Si hay imágenes de referencia, usamos flux-pro con image conditioning
-        // Si no, usamos flux/dev para texto a imagen puro
-        const endpoint = hasReferenceImages
-            ? 'https://fal.run/fal-ai/flux-pro/v1.1-ultra'
-            : 'https://fal.run/fal-ai/flux/dev';
+        // Determinamos image_size según aspect ratio
+        let image_size = 'square_hd';
+        if (params.aspectRatio === '16:9') image_size = 'landscape_16_9';
+        else if (params.aspectRatio === '9:16') image_size = 'portrait_16_9';
+        else image_size = 'square_hd';
 
-        const body: any = {
-            prompt: params.prompt,
-            num_images: 1,
-            enable_safety_checker: false,
-            output_format: 'jpeg',
-        };
+        let endpoint: string;
+        let body: any;
 
-        // Aspect ratio
-        if (params.aspectRatio === '9:16') body.image_size = 'portrait_16_9';
-        else if (params.aspectRatio === '1:1') body.image_size = 'square_hd';
-        else body.image_size = 'landscape_16_9';
-
-        // Referencia visual: si tenemos imágenes, las mandamos como image_url para conditioning
         if (hasReferenceImages) {
-            body.image_url = params.referenceImageUrls[0]; // Primera imagen como referencia principal
-            body.strength = 0.75; // Cuánto respeta la referencia (0=libre, 1=copia exacta)
+            // Con referencias: usamos flux-pro/v1/redux que acepta image_url
+            // Es el mejor relación precio/fidelidad de producto con imagen de referencia
+            // ~$0.05 por imagen pero mantiene los rasgos visuales del producto
+            endpoint = 'https://fal.run/fal-ai/flux-pro/v1/redux';
+            body = {
+                prompt: params.prompt,
+                image_url: cleanRefs[0], // imagen de referencia principal
+                image_size,
+                num_inference_steps: 28,
+                guidance_scale: 3.5,
+                num_images: 1,
+                output_format: 'jpeg',
+                safety_tolerance: '5',
+            };
+        } else {
+            // Sin referencias: flux/dev es el mejor relación calidad/precio
+            // ~$0.003 por imagen
+            endpoint = 'https://fal.run/fal-ai/flux/dev';
+            body = {
+                prompt: params.prompt,
+                image_size,
+                num_inference_steps: 28,
+                guidance_scale: 3.5,
+                num_images: 1,
+                enable_safety_checker: false,
+                output_format: 'jpeg',
+            };
         }
 
         const response = await fetch(endpoint, {
@@ -223,59 +261,85 @@ async function callFalImageGeneration(params: {
             body: JSON.stringify(body),
         });
 
+        const rawText = await response.text();
+
         if (!response.ok) {
-            const errText = await response.text();
-            return { success: false, error: `fal.ai error ${response.status}: ${errText}` };
+            return { success: false, error: `fal.ai error ${response.status}: ${rawText.slice(0, 300)}` };
         }
 
-        const data = await response.json();
+        let data: any;
+        try { data = JSON.parse(rawText); } catch {
+            return { success: false, error: `Respuesta inválida de fal.ai: ${rawText.slice(0, 200)}` };
+        }
+
         const outputUrl = data?.images?.[0]?.url || data?.image?.url || null;
 
         if (!outputUrl) {
-            return { success: false, error: 'fal.ai no devolvió imagen en la respuesta.' };
+            return { success: false, error: `fal.ai no devolvió imagen. Respuesta: ${JSON.stringify(data).slice(0, 300)}` };
         }
 
         return { success: true, outputUrl, requestId: data?.request_id };
+
     } catch (err: any) {
-        return { success: false, error: `Error de conexión con fal.ai: ${err.message}` };
+        return { success: false, error: `Error de red con fal.ai: ${err.message}` };
     }
 }
 
 // ─────────────────────────────────────────────────────────────
-// FAL.AI SERVICE - VIDEO GENERATION
-// Nota arquitectural: Los videos tardan más. Este endpoint
-// puede devolver un request_id para polling.
-// Modelo recomendado: fal-ai/kling-video o fal-ai/minimax-video
+// FAL.AI - GENERACIÓN DE VIDEO
+//
+// Modelo elegido: fal-ai/kling-video/v2.1/standard/image-to-video
+// - Acepta imagen de referencia del producto → máxima fidelidad
+// - ~$0.07 por 5s clip, standard quality
+// - Alternativa: minimax/video-01 si kling falla (~$0.05)
+//
+// Los videos SIEMPRE son asincrónicos en fal.ai.
+// Retornamos el request_id para hacer polling desde el cliente.
 // ─────────────────────────────────────────────────────────────
 async function callFalVideoGeneration(params: {
     prompt: string;
     referenceImageUrls: string[];
     durationSeconds: number;
     aspectRatio: string;
-}): Promise<{ success: boolean; outputUrl?: string; requestId?: string; error?: string }> {
-    const FAL_KEY = process.env.FAL_API_KEY;
+}): Promise<{ success: boolean; outputUrl?: string; requestId?: string; endpoint?: string; error?: string }> {
+    const FAL_KEY = getFalKey();
     if (!FAL_KEY) {
-        return { success: false, error: 'FAL_API_KEY no configurada en variables de entorno.' };
+        return { success: false, error: 'FAL_KEY no configurada.' };
     }
 
     try {
-        // Usamos kling-video si hay imagen de referencia, minimax-video si es solo texto
-        const hasRef = params.referenceImageUrls.length > 0;
-        const endpoint = hasRef
-            ? 'https://fal.run/fal-ai/kling-video/v1.6/pro/image-to-video'
-            : 'https://fal.run/fal-ai/minimax-video/image-to-video';
+        const cleanRefs = params.referenceImageUrls.filter(u => u && u.startsWith('http'));
+        const hasRef = cleanRefs.length > 0;
 
-        const body: any = {
-            prompt: params.prompt,
-            duration: params.durationSeconds <= 5 ? '5' : '10',
-            aspect_ratio: params.aspectRatio === '9:16' ? '9:16' : params.aspectRatio === '1:1' ? '1:1' : '16:9',
-        };
+        const duration = params.durationSeconds <= 5 ? '5' : '10';
+        const aspect_ratio = params.aspectRatio === '9:16' ? '9:16'
+            : params.aspectRatio === '1:1' ? '1:1' : '16:9';
+
+        // Endpoint queue: los videos siempre van por la cola asincrónica de fal
+        // El endpoint principal se usa para submit, luego polling por request_id
+        let endpointId: string;
+        let body: any;
 
         if (hasRef) {
-            body.image_url = params.referenceImageUrls[0];
+            // kling-video image-to-video: toma la imagen del producto y genera video
+            endpointId = 'fal-ai/kling-video/v2.1/standard/image-to-video';
+            body = {
+                prompt: params.prompt,
+                image_url: cleanRefs[0],
+                duration,
+                aspect_ratio,
+            };
+        } else {
+            // Sin referencia: minimax video-01 text-to-video
+            endpointId = 'fal-ai/minimax/video-01';
+            body = {
+                prompt: params.prompt,
+                prompt_optimizer: true,
+            };
         }
 
-        const response = await fetch(endpoint, {
+        // Submit al queue de fal.ai (endpoint asincrónico)
+        const submitRes = await fetch(`https://queue.fal.run/${endpointId}`, {
             method: 'POST',
             headers: {
                 'Authorization': `Key ${FAL_KEY}`,
@@ -284,62 +348,84 @@ async function callFalVideoGeneration(params: {
             body: JSON.stringify(body),
         });
 
-        if (!response.ok) {
-            const errText = await response.text();
-            return { success: false, error: `fal.ai video error ${response.status}: ${errText}` };
+        const rawText = await submitRes.text();
+
+        if (!submitRes.ok) {
+            return { success: false, error: `fal.ai queue error ${submitRes.status}: ${rawText.slice(0, 300)}` };
         }
 
-        const data = await response.json();
-
-        // Kling puede devolver el video directo o un request_id para polling
-        const outputUrl = data?.video?.url || data?.video_url || null;
-        const requestId = data?.request_id || null;
-
-        if (outputUrl) {
-            return { success: true, outputUrl, requestId };
-        } else if (requestId) {
-            // El video está procesándose asincrónicamente
-            return { success: true, requestId, outputUrl: undefined };
-        } else {
-            return { success: false, error: 'fal.ai no devolvió video ni request_id.' };
+        let data: any;
+        try { data = JSON.parse(rawText); } catch {
+            return { success: false, error: `Respuesta inválida del queue: ${rawText.slice(0, 200)}` };
         }
+
+        const requestId = data?.request_id;
+        if (!requestId) {
+            return { success: false, error: `fal.ai no devolvió request_id. Respuesta: ${JSON.stringify(data).slice(0, 300)}` };
+        }
+
+        // Devolvemos el request_id para polling desde el action de check
+        return { success: true, requestId, endpoint: endpointId };
+
     } catch (err: any) {
-        return { success: false, error: `Error de conexión con fal.ai: ${err.message}` };
+        return { success: false, error: `Error de red con fal.ai video: ${err.message}` };
     }
 }
 
 // ─────────────────────────────────────────────────────────────
-// POLLING: verificar resultado de generación asincrónica
+// POLLING - verifica el resultado del queue de fal.ai
 // ─────────────────────────────────────────────────────────────
-async function pollFalResult(requestId: string, endpoint: string): Promise<{
+async function pollFalQueue(requestId: string, endpointId: string): Promise<{
     status: 'processing' | 'completed' | 'failed';
     outputUrl?: string;
     error?: string;
 }> {
-    const FAL_KEY = process.env.FAL_API_KEY;
-    if (!FAL_KEY) return { status: 'failed', error: 'No FAL_API_KEY' };
+    const FAL_KEY = getFalKey();
+    if (!FAL_KEY) return { status: 'failed', error: 'No FAL_KEY' };
 
     try {
-        const response = await fetch(`https://queue.fal.run/${endpoint}/requests/${requestId}/status`, {
-            headers: { 'Authorization': `Key ${FAL_KEY}` },
-        });
-        const data = await response.json();
+        // 1. Verificar status
+        const statusRes = await fetch(
+            `https://queue.fal.run/${endpointId}/requests/${requestId}/status`,
+            { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+        );
+        const statusData = await statusRes.json();
 
-        if (data.status === 'COMPLETED') {
-            const outputUrl = data?.response?.video?.url || data?.response?.images?.[0]?.url || null;
-            return { status: 'completed', outputUrl };
-        } else if (data.status === 'FAILED') {
-            return { status: 'failed', error: data.error || 'Generation failed' };
-        } else {
+        if (statusData.status === 'FAILED') {
+            return { status: 'failed', error: statusData.error || 'Generation failed in queue' };
+        }
+
+        if (statusData.status !== 'COMPLETED') {
             return { status: 'processing' };
         }
-    } catch {
-        return { status: 'failed', error: 'Polling error' };
+
+        // 2. Obtener resultado completo si está COMPLETED
+        const resultRes = await fetch(
+            `https://queue.fal.run/${endpointId}/requests/${requestId}`,
+            { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+        );
+        const resultData = await resultRes.json();
+
+        const outputUrl =
+            resultData?.video?.url ||
+            resultData?.video_url ||
+            resultData?.output?.video?.url ||
+            resultData?.images?.[0]?.url ||
+            null;
+
+        if (!outputUrl) {
+            return { status: 'failed', error: `No output URL in result: ${JSON.stringify(resultData).slice(0, 200)}` };
+        }
+
+        return { status: 'completed', outputUrl };
+
+    } catch (err: any) {
+        return { status: 'failed', error: `Polling error: ${err.message}` };
     }
 }
 
 // ─────────────────────────────────────────────────────────────
-// ACTION PRINCIPAL: GENERAR IMAGEN
+// ACTION: GENERAR IMAGEN
 // ─────────────────────────────────────────────────────────────
 export async function generateImageAction(params: {
     pipeline: Pipeline;
@@ -359,11 +445,11 @@ export async function generateImageAction(params: {
     modelDescription?: string;
 }) {
     try {
-        // 1. Obtener imágenes de referencia del producto si viene de Tool 1
-        let referenceImages: string[] = [...(params.uploadedReferenceImages || [])];
+        let referenceImages: string[] = [...(params.uploadedReferenceImages || []).filter(u => u)];
         let productName = params.productName || '';
 
-        if (params.productIds.length > 0) {
+        // Obtener imágenes del catálogo si viene de Tool 1
+        if (params.productIds && params.productIds.length > 0) {
             const { data: products } = await supabase
                 .from('products')
                 .select('name, image_urls, internal_reference_images')
@@ -371,45 +457,47 @@ export async function generateImageAction(params: {
 
             if (products && products.length > 0) {
                 if (!productName) productName = products[0].name;
-                // Priorizar imágenes internas, luego las públicas
                 for (const prod of products) {
-                    const internalImgs: string[] = prod.internal_reference_images || [];
-                    const publicImgs: string[] = prod.image_urls || [];
+                    const internalImgs: string[] = (prod.internal_reference_images || []).filter((u: string) => u);
+                    const publicImgs: string[] = (prod.image_urls || []).filter((u: string) => u);
+                    // Priorizar fotos internas (más útiles para la IA)
                     const productImgs = internalImgs.length > 0 ? internalImgs : publicImgs;
-                    referenceImages = [...referenceImages, ...productImgs];
+                    referenceImages = [...referenceImages, ...productImgs.slice(0, 2)];
                 }
             }
         }
 
-        // 2. Agregar imágenes del modelo si corresponde
-        if (params.uploadedModelImages && params.uploadedModelImages.length > 0) {
-            referenceImages = [...referenceImages, ...params.uploadedModelImages];
-        } else if (params.savedModelId) {
+        // Agregar fotos del modelo (moda)
+        if (params.savedModelId) {
             const { data: model } = await supabase
                 .from('tool_ai_saved_models')
                 .select('reference_images, name, description')
                 .eq('id', params.savedModelId)
                 .single();
             if (model) {
-                const modelImgs: string[] = model.reference_images || [];
-                referenceImages = [...referenceImages, ...modelImgs];
-                if (!params.modelDescription) params.modelDescription = model.description || model.name;
+                referenceImages = [...referenceImages, ...(model.reference_images || []).filter((u: string) => u)];
+                if (!params.modelDescription) {
+                    params = { ...params, modelDescription: model.description || model.name };
+                }
             }
         }
 
-        // Máximo 3 imágenes de referencia combinadas (limitación de la API)
-        referenceImages = referenceImages.slice(0, 3);
+        if (params.uploadedModelImages && params.uploadedModelImages.length > 0) {
+            referenceImages = [...referenceImages, ...params.uploadedModelImages.filter((u: string) => u)];
+        }
 
-        // 3. Construir prompt final
+        // Máximo 2 refs para flux-pro/redux (la API soporta 1 imagen_url principal)
+        referenceImages = [...new Set(referenceImages)].slice(0, 2);
+
         const finalPrompt = buildPhotoPrompt({ ...params, productName }, params.pipeline);
 
-        // 4. Crear registro en historial con estado "processing"
+        // Guardar en historial como 'processing'
         const { data: generationRecord, error: insertError } = await supabase
             .from('tool_ai_generations')
             .insert({
                 generation_type: 'photo',
                 pipeline: params.pipeline,
-                product_ids: params.productIds,
+                product_ids: params.productIds || [],
                 uploaded_reference_images: referenceImages,
                 saved_model_id: params.savedModelId || null,
                 uploaded_model_images: params.uploadedModelImages || [],
@@ -423,50 +511,52 @@ export async function generateImageAction(params: {
                 style: params.style || null,
                 final_prompt: finalPrompt,
                 ai_provider: 'fal.ai',
-                ai_model: referenceImages.length > 0 ? 'flux-pro/v1.1-ultra' : 'flux/dev',
+                ai_model: referenceImages.length > 0 ? 'flux-pro/v1/redux' : 'flux/dev',
                 status: 'processing',
             })
             .select('id')
             .single();
 
-        if (insertError) return { success: false, error: insertError.message };
+        if (insertError) {
+            // Si la tabla no existe, generamos igual (modo sin historial)
+            const aiResult = await callFalImageGeneration({ prompt: finalPrompt, referenceImageUrls: referenceImages });
+            if (aiResult.success && aiResult.outputUrl) {
+                return { success: true, outputUrl: aiResult.outputUrl };
+            }
+            return { success: false, error: aiResult.error || insertError.message };
+        }
 
         const generationId = generationRecord.id;
 
-        // 5. Llamar a fal.ai
+        // Llamar a fal.ai
         const aiResult = await callFalImageGeneration({
             prompt: finalPrompt,
             referenceImageUrls: referenceImages,
         });
 
-        // 6. Actualizar registro con resultado
         if (aiResult.success && aiResult.outputUrl) {
             await supabase
                 .from('tool_ai_generations')
-                .update({
-                    status: 'completed',
-                    output_url: aiResult.outputUrl,
-                    ai_request_id: aiResult.requestId || null,
-                })
+                .update({ status: 'completed', output_url: aiResult.outputUrl })
                 .eq('id', generationId);
 
-            revalidatePath('/dashboard/tools/tool-4-ai/historial');
+            revalidatePath('/dashboard/tools/tool-4-ai-studio/historial');
             return { success: true, generationId, outputUrl: aiResult.outputUrl };
         } else {
             await supabase
                 .from('tool_ai_generations')
                 .update({ status: 'failed', error_message: aiResult.error })
                 .eq('id', generationId);
-
             return { success: false, generationId, error: aiResult.error };
         }
+
     } catch (err: any) {
-        return { success: false, error: err.message };
+        return { success: false, error: `Error interno: ${err.message}` };
     }
 }
 
 // ─────────────────────────────────────────────────────────────
-// ACTION PRINCIPAL: GENERAR VIDEO
+// ACTION: GENERAR VIDEO
 // ─────────────────────────────────────────────────────────────
 export async function generateVideoAction(params: {
     pipeline: Pipeline;
@@ -487,10 +577,10 @@ export async function generateVideoAction(params: {
     modelDescription?: string;
 }) {
     try {
-        let referenceImages: string[] = [...(params.uploadedReferenceImages || [])];
+        let referenceImages: string[] = [...(params.uploadedReferenceImages || []).filter(u => u)];
         let productName = params.productName || '';
 
-        if (params.productIds.length > 0) {
+        if (params.productIds && params.productIds.length > 0) {
             const { data: products } = await supabase
                 .from('products')
                 .select('name, image_urls, internal_reference_images')
@@ -499,9 +589,9 @@ export async function generateVideoAction(params: {
             if (products && products.length > 0) {
                 if (!productName) productName = products[0].name;
                 for (const prod of products) {
-                    const internalImgs: string[] = prod.internal_reference_images || [];
-                    const publicImgs: string[] = prod.image_urls || [];
-                    referenceImages = [...referenceImages, ...(internalImgs.length > 0 ? internalImgs : publicImgs)];
+                    const internalImgs: string[] = (prod.internal_reference_images || []).filter((u: string) => u);
+                    const publicImgs: string[] = (prod.image_urls || []).filter((u: string) => u);
+                    referenceImages = [...referenceImages, ...(internalImgs.length > 0 ? internalImgs : publicImgs).slice(0, 1)];
                 }
             }
         }
@@ -512,10 +602,10 @@ export async function generateVideoAction(params: {
                 .select('reference_images')
                 .eq('id', params.savedModelId)
                 .single();
-            if (model) referenceImages = [...referenceImages, ...(model.reference_images || [])];
+            if (model) referenceImages = [...referenceImages, ...(model.reference_images || []).filter((u: string) => u)];
         }
 
-        referenceImages = referenceImages.slice(0, 2); // Video acepta menos referencias
+        referenceImages = [...new Set(referenceImages)].slice(0, 1); // video acepta 1 referencia
 
         const finalPrompt = buildVideoPrompt({ ...params, productName }, params.pipeline);
 
@@ -524,7 +614,7 @@ export async function generateVideoAction(params: {
             .insert({
                 generation_type: 'video',
                 pipeline: params.pipeline,
-                product_ids: params.productIds,
+                product_ids: params.productIds || [],
                 uploaded_reference_images: referenceImages,
                 saved_model_id: params.savedModelId || null,
                 background_type: params.backgroundType,
@@ -538,13 +628,25 @@ export async function generateVideoAction(params: {
                 aspect_ratio: params.aspectRatio,
                 final_prompt: finalPrompt,
                 ai_provider: 'fal.ai',
-                ai_model: referenceImages.length > 0 ? 'kling-video/v1.6' : 'minimax-video',
+                ai_model: referenceImages.length > 0 ? 'kling-video/v2.1' : 'minimax/video-01',
                 status: 'processing',
             })
             .select('id')
             .single();
 
-        if (insertError) return { success: false, error: insertError.message };
+        if (insertError) {
+            // Sin tabla disponible, llamamos igual
+            const aiResult = await callFalVideoGeneration({
+                prompt: finalPrompt,
+                referenceImageUrls: referenceImages,
+                durationSeconds: params.durationSeconds,
+                aspectRatio: params.aspectRatio,
+            });
+            if (aiResult.success && aiResult.requestId) {
+                return { success: true, pending: true, requestId: aiResult.requestId, endpoint: aiResult.endpoint };
+            }
+            return { success: false, error: aiResult.error || insertError.message };
+        }
 
         const generationId = generationRecord.id;
 
@@ -555,20 +657,24 @@ export async function generateVideoAction(params: {
             aspectRatio: params.aspectRatio,
         });
 
-        if (aiResult.success && aiResult.outputUrl) {
+        if (aiResult.success && aiResult.requestId) {
             await supabase
                 .from('tool_ai_generations')
-                .update({ status: 'completed', output_url: aiResult.outputUrl, ai_request_id: aiResult.requestId })
+                .update({
+                    status: 'processing',
+                    ai_request_id: aiResult.requestId,
+                    // Guardamos el endpoint para poder hacer polling después
+                    ai_model: aiResult.endpoint || (referenceImages.length > 0 ? 'fal-ai/kling-video/v2.1/standard/image-to-video' : 'fal-ai/minimax/video-01'),
+                })
                 .eq('id', generationId);
-            revalidatePath('/dashboard/tools/tool-4-ai/historial');
-            return { success: true, generationId, outputUrl: aiResult.outputUrl };
-        } else if (aiResult.success && aiResult.requestId) {
-            // Asincrónico - el cliente deberá hacer polling
-            await supabase
-                .from('tool_ai_generations')
-                .update({ status: 'processing', ai_request_id: aiResult.requestId })
-                .eq('id', generationId);
-            return { success: true, generationId, pending: true, requestId: aiResult.requestId };
+
+            return {
+                success: true,
+                generationId,
+                pending: true,
+                requestId: aiResult.requestId,
+                endpoint: aiResult.endpoint,
+            };
         } else {
             await supabase
                 .from('tool_ai_generations')
@@ -576,40 +682,69 @@ export async function generateVideoAction(params: {
                 .eq('id', generationId);
             return { success: false, generationId, error: aiResult.error };
         }
+
+    } catch (err: any) {
+        return { success: false, error: `Error interno: ${err.message}` };
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// ACTION: POLLING DE ESTADO (llamado desde el cliente cada 5s)
+// ─────────────────────────────────────────────────────────────
+export async function checkGenerationStatusAction(generationId: string) {
+    try {
+        const { data, error } = await supabase
+            .from('tool_ai_generations')
+            .select('status, output_url, error_message, ai_request_id, ai_model, generation_type')
+            .eq('id', generationId)
+            .single();
+
+        if (error) return { success: false, error: error.message };
+
+        if (data.status === 'processing' && data.ai_request_id && data.ai_model) {
+            // El ai_model en video contiene el endpoint completo
+            const endpointId = data.ai_model.includes('fal-ai/')
+                ? data.ai_model
+                : data.generation_type === 'video'
+                    ? 'fal-ai/kling-video/v2.1/standard/image-to-video'
+                    : 'fal-ai/flux-pro/v1/redux';
+
+            const polled = await pollFalQueue(data.ai_request_id, endpointId);
+
+            if (polled.status === 'completed' && polled.outputUrl) {
+                await supabase
+                    .from('tool_ai_generations')
+                    .update({ status: 'completed', output_url: polled.outputUrl })
+                    .eq('id', generationId);
+                revalidatePath('/dashboard/tools/tool-4-ai-studio/historial');
+                return { success: true, status: 'completed', outputUrl: polled.outputUrl };
+            } else if (polled.status === 'failed') {
+                await supabase
+                    .from('tool_ai_generations')
+                    .update({ status: 'failed', error_message: polled.error })
+                    .eq('id', generationId);
+                return { success: true, status: 'failed', error: polled.error };
+            }
+            // still processing
+        }
+
+        return {
+            success: true,
+            status: data.status,
+            outputUrl: data.output_url,
+            error: data.error_message,
+        };
     } catch (err: any) {
         return { success: false, error: err.message };
     }
 }
 
 // ─────────────────────────────────────────────────────────────
-// POLLING DE ESTADO DE GENERACIÓN (para video asincrónico)
+// ACTION: POLLING DIRECTO SIN ID EN DB (fallback cuando no hay tabla)
 // ─────────────────────────────────────────────────────────────
-export async function checkGenerationStatusAction(generationId: string) {
-    const { data, error } = await supabase
-        .from('tool_ai_generations')
-        .select('status, output_url, error_message, ai_request_id, ai_model, generation_type')
-        .eq('id', generationId)
-        .single();
-
-    if (error) return { success: false, error: error.message };
-
-    // Si sigue en processing y tenemos request_id, consultamos a fal.ai
-    if (data.status === 'processing' && data.ai_request_id) {
-        const endpoint = data.generation_type === 'video'
-            ? (data.ai_model?.includes('kling') ? 'fal-ai/kling-video/v1.6/pro/image-to-video' : 'fal-ai/minimax-video')
-            : 'fal-ai/flux-pro/v1.1-ultra';
-
-        const polled = await pollFalResult(data.ai_request_id, endpoint);
-        if (polled.status === 'completed' && polled.outputUrl) {
-            await supabase.from('tool_ai_generations').update({ status: 'completed', output_url: polled.outputUrl }).eq('id', generationId);
-            return { success: true, status: 'completed', outputUrl: polled.outputUrl };
-        } else if (polled.status === 'failed') {
-            await supabase.from('tool_ai_generations').update({ status: 'failed', error_message: polled.error }).eq('id', generationId);
-            return { success: true, status: 'failed', error: polled.error };
-        }
-    }
-
-    return { success: true, status: data.status, outputUrl: data.output_url, error: data.error_message };
+export async function pollVideoDirectAction(requestId: string, endpointId: string) {
+    const polled = await pollFalQueue(requestId, endpointId);
+    return polled;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -620,38 +755,46 @@ export async function getGenerationsHistoryAction(filters?: {
     pipeline?: string;
     limit?: number;
 }) {
-    let query = supabase
-        .from('tool_ai_generations')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(filters?.limit || 50);
+    try {
+        let query = supabase
+            .from('tool_ai_generations')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(filters?.limit || 60);
 
-    if (filters?.type) query = query.eq('generation_type', filters.type);
-    if (filters?.pipeline) query = query.eq('pipeline', filters.pipeline);
+        if (filters?.type) query = query.eq('generation_type', filters.type);
+        if (filters?.pipeline) query = query.eq('pipeline', filters.pipeline);
 
-    const { data, error } = await query;
-    if (error) return { success: false, error: error.message };
-    return { success: true, data };
+        const { data, error } = await query;
+        if (error) return { success: false, error: error.message, data: [] };
+        return { success: true, data: data || [] };
+    } catch (err: any) {
+        return { success: false, error: err.message, data: [] };
+    }
 }
 
 export async function deleteGenerationAction(id: string) {
     const { error } = await supabase.from('tool_ai_generations').delete().eq('id', id);
     if (error) return { success: false, error: error.message };
-    revalidatePath('/dashboard/tools/tool-4-ai/historial');
+    revalidatePath('/dashboard/tools/tool-4-ai-studio/historial');
     return { success: true };
 }
 
 // ─────────────────────────────────────────────────────────────
-// MODELOS HUMANOS GUARDADOS
+// MODELOS GUARDADOS
 // ─────────────────────────────────────────────────────────────
 export async function getSavedModelsAction() {
-    const { data, error } = await supabase
-        .from('tool_ai_saved_models')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-    if (error) return { success: false, error: error.message };
-    return { success: true, data };
+    try {
+        const { data, error } = await supabase
+            .from('tool_ai_saved_models')
+            .select('*')
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
+        if (error) return { success: false, error: error.message, data: [] };
+        return { success: true, data: data || [] };
+    } catch (err: any) {
+        return { success: false, error: err.message, data: [] };
+    }
 }
 
 export async function saveSavedModelAction(model: {
@@ -661,57 +804,67 @@ export async function saveSavedModelAction(model: {
     referenceImages: string[];
     tags: string[];
 }) {
-    if (model.id) {
-        const { error } = await supabase
-            .from('tool_ai_saved_models')
-            .update({
+    try {
+        if (model.id) {
+            const { error } = await supabase
+                .from('tool_ai_saved_models')
+                .update({
+                    name: model.name,
+                    description: model.description || null,
+                    reference_images: model.referenceImages,
+                    tags: model.tags,
+                })
+                .eq('id', model.id);
+            if (error) return { success: false, error: error.message };
+        } else {
+            const { count } = await supabase
+                .from('tool_ai_saved_models')
+                .select('id', { count: 'exact', head: true })
+                .eq('is_active', true);
+            if ((count || 0) >= 5) return { success: false, error: 'Límite de 5 modelos alcanzado.' };
+
+            const { error } = await supabase.from('tool_ai_saved_models').insert({
                 name: model.name,
                 description: model.description || null,
                 reference_images: model.referenceImages,
                 tags: model.tags,
-            })
-            .eq('id', model.id);
-        if (error) return { success: false, error: error.message };
-    } else {
-        // Máximo 5 modelos
-        const { count } = await supabase.from('tool_ai_saved_models').select('id', { count: 'exact', head: true }).eq('is_active', true);
-        if ((count || 0) >= 5) return { success: false, error: 'Límite de 5 modelos guardados alcanzado.' };
-
-        const { error } = await supabase.from('tool_ai_saved_models').insert({
-            name: model.name,
-            description: model.description || null,
-            reference_images: model.referenceImages,
-            tags: model.tags,
-        });
-        if (error) return { success: false, error: error.message };
+            });
+            if (error) return { success: false, error: error.message };
+        }
+        revalidatePath('/dashboard/tools/tool-4-ai-studio/configuracion');
+        return { success: true };
+    } catch (err: any) {
+        return { success: false, error: err.message };
     }
-    revalidatePath('/dashboard/tools/tool-4-ai/configuracion');
-    return { success: true };
 }
 
 export async function deleteSavedModelAction(id: string) {
-    const { error } = await supabase.from('tool_ai_saved_models').update({ is_active: false }).eq('id', id);
+    const { error } = await supabase
+        .from('tool_ai_saved_models')
+        .update({ is_active: false })
+        .eq('id', id);
     if (error) return { success: false, error: error.message };
-    revalidatePath('/dashboard/tools/tool-4-ai/configuracion');
+    revalidatePath('/dashboard/tools/tool-4-ai-studio/configuracion');
     return { success: true };
 }
 
 // ─────────────────────────────────────────────────────────────
-// PRODUCTOS PARA SELECTOR (de Tool 1)
+// PRODUCTOS DE TOOL 1
 // ─────────────────────────────────────────────────────────────
 export async function getProductsForAiAction() {
-    const { data, error } = await supabase
-        .from('products')
-        .select('id, name, sku, category, image_urls, internal_reference_images, price_installments')
-        .order('created_at', { ascending: false })
-        .limit(200);
-    if (error) return { success: false, error: error.message };
-    return { success: true, data };
+    try {
+        const { data, error } = await supabase
+            .from('products')
+            .select('id, name, sku, category, image_urls, internal_reference_images, price_installments')
+            .order('created_at', { ascending: false })
+            .limit(200);
+        if (error) return { success: false, error: error.message, data: [] };
+        return { success: true, data: data || [] };
+    } catch (err: any) {
+        return { success: false, error: err.message, data: [] };
+    }
 }
 
-// ─────────────────────────────────────────────────────────────
-// ACTUALIZAR IMÁGENES INTERNAS DE UN PRODUCTO
-// ─────────────────────────────────────────────────────────────
 export async function updateInternalImagesAction(productId: string, images: string[]) {
     const { error } = await supabase
         .from('products')

@@ -25,7 +25,7 @@ export default function Tool4Hub() {
 
                 {/* FOTOS */}
                 <Link
-                    href="/dashboard/tools/tool-4-ai/generador?tipo=foto"
+                    href="/dashboard/tools/tool-4-ai-studio/generador?tipo=foto"
                     className="group relative bg-slate-900 rounded-3xl p-8 md:p-10 overflow-hidden border border-slate-800 hover:border-rose-500/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-rose-500/10"
                 >
                     <div className="absolute inset-0 bg-gradient-to-br from-rose-600/10 to-orange-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -54,7 +54,7 @@ export default function Tool4Hub() {
 
                 {/* VIDEOS */}
                 <Link
-                    href="/dashboard/tools/tool-4-ai/generador?tipo=video"
+                    href="/dashboard/tools/tool-4-ai-studio/generador?tipo=video"
                     className="group relative bg-slate-900 rounded-3xl p-8 md:p-10 overflow-hidden border border-slate-800 hover:border-violet-500/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-violet-500/10"
                 >
                     <div className="absolute inset-0 bg-gradient-to-br from-violet-600/10 to-indigo-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -84,7 +84,7 @@ export default function Tool4Hub() {
 
             {/* Secondary actions */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Link href="/dashboard/tools/tool-4-ai/historial" className="flex items-center gap-4 bg-white border border-slate-200 p-5 rounded-2xl hover:border-slate-300 hover:shadow-md transition-all group">
+                <Link href="/dashboard/tools/tool-4-ai-studio/historial" className="flex items-center gap-4 bg-white border border-slate-200 p-5 rounded-2xl hover:border-slate-300 hover:shadow-md transition-all group">
                     <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-slate-800 group-hover:text-white transition-colors">
                         <History size={20} className="text-slate-600 group-hover:text-white" />
                     </div>
@@ -95,7 +95,7 @@ export default function Tool4Hub() {
                     <ArrowRight size={16} className="ml-auto text-slate-300 group-hover:text-slate-600 group-hover:translate-x-1 transition-all" />
                 </Link>
 
-                <Link href="/dashboard/tools/tool-4-ai/configuracion" className="flex items-center gap-4 bg-white border border-slate-200 p-5 rounded-2xl hover:border-slate-300 hover:shadow-md transition-all group">
+                <Link href="/dashboard/tools/tool-4-ai-studio/configuracion" className="flex items-center gap-4 bg-white border border-slate-200 p-5 rounded-2xl hover:border-slate-300 hover:shadow-md transition-all group">
                     <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-slate-800 group-hover:text-white transition-colors">
                         <Settings2 size={20} className="text-slate-600 group-hover:text-white" />
                     </div>

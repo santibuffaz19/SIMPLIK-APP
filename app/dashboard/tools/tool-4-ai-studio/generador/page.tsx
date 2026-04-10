@@ -11,7 +11,7 @@ import {
 import { uploadImageAction } from '../../tool-1-QR/actions';
 import {
     generateImageAction, generateVideoAction, checkGenerationStatusAction,
-    getProductsForAiAction, getSavedModelsAction, type Pipeline
+    getProductsForAiAction, getSavedModelsAction, pollVideoDirectAction, type Pipeline
 } from '../actions';
 
 // ─── Tipos ───────────────────────────────────────────────────
@@ -210,6 +210,8 @@ function GeneradorContent() {
     const [generating, setGenerating] = useState(false);
     const [result, setResult] = useState<{ url: string; type: GenType } | null>(null);
     const [generationId, setGenerationId] = useState<string | null>(null);
+    const [directRequestId, setDirectRequestId] = useState<string | null>(null);
+    const [directEndpoint, setDirectEndpoint] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [pendingPoll, setPendingPoll] = useState(false);
 
@@ -220,23 +222,42 @@ function GeneradorContent() {
 
     // Polling para videos asincrónicos
     useEffect(() => {
-        if (!pendingPoll || !generationId) return;
+        if (!pendingPoll) return;
+        // Si tenemos generationId usamos el action que lee de DB
+        // Si no tenemos generationId pero sí directRequestId, usamos polling directo
+        if (!generationId && !directRequestId) return;
+
         pollingRef.current = setInterval(async () => {
-            const res = await checkGenerationStatusAction(generationId);
-            if (res.status === 'completed' && res.outputUrl) {
-                setResult({ url: res.outputUrl, type: genType });
+            let status: string = 'processing';
+            let outputUrl: string | undefined;
+            let errorMsg: string | undefined;
+
+            if (generationId) {
+                const res = await checkGenerationStatusAction(generationId);
+                status = res.status || 'processing';
+                outputUrl = res.outputUrl;
+                errorMsg = res.error;
+            } else if (directRequestId && directEndpoint) {
+                const res = await pollVideoDirectAction(directRequestId, directEndpoint);
+                status = res.status;
+                outputUrl = res.outputUrl;
+                errorMsg = res.error;
+            }
+
+            if (status === 'completed' && outputUrl) {
+                setResult({ url: outputUrl, type: genType });
                 setPendingPoll(false);
                 setGenerating(false);
                 if (pollingRef.current) clearInterval(pollingRef.current);
-            } else if (res.status === 'failed') {
-                setError(res.error || 'La generación falló.');
+            } else if (status === 'failed') {
+                setError(errorMsg || 'La generación de video falló.');
                 setPendingPoll(false);
                 setGenerating(false);
                 if (pollingRef.current) clearInterval(pollingRef.current);
             }
-        }, 5000);
+        }, 6000);
         return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
-    }, [pendingPoll, generationId]);
+    }, [pendingPoll, generationId, directRequestId, directEndpoint]);
 
     const toggleProductId = (id: string) => {
         setSelectedProductIds(prev =>
@@ -276,6 +297,9 @@ function GeneradorContent() {
         setError(null);
         setResult(null);
         setPendingPoll(false);
+        setGenerationId(null);
+        setDirectRequestId(null);
+        setDirectEndpoint(null);
 
         const selectedProducts = getSelectedProducts();
         const productName = selectedProducts.length > 0
@@ -317,15 +341,18 @@ function GeneradorContent() {
                 durationSeconds: duration,
                 aspectRatio,
             });
-            setGenerationId(res.generationId || null);
-            if (res.success && res.outputUrl) {
-                setResult({ url: res.outputUrl, type: 'video' });
+            setGenerationId((res as any).generationId || null);
+            if (res.success && (res as any).outputUrl) {
+                setResult({ url: (res as any).outputUrl, type: 'video' });
                 setGenerating(false);
             } else if (res.success && (res as any).pending) {
+                // Guardar requestId y endpoint para polling (con o sin DB)
+                if ((res as any).requestId) setDirectRequestId((res as any).requestId);
+                if ((res as any).endpoint) setDirectEndpoint((res as any).endpoint);
                 setPendingPoll(true);
-                // generating remains true, polling will update
+                // generating remains true until polling resolves
             } else {
-                setError(res.error || 'Error desconocido al generar.');
+                setError((res as any).error || 'Error al generar el video. Verificá tu FAL_KEY.');
                 setGenerating(false);
             }
         }
@@ -349,7 +376,7 @@ function GeneradorContent() {
 
             {/* Header */}
             <div className="flex items-center gap-3 mb-8 mt-12 md:mt-0">
-                <Link href="/dashboard/tools/tool-4-ai" className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+                <Link href="/dashboard/tools/tool-4-ai-studio" className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
                     <ArrowLeft size={20} />
                 </Link>
                 <h1 className="text-2xl md:text-3xl font-black text-slate-900">
@@ -487,7 +514,7 @@ function GeneradorContent() {
                                 savedModels.length === 0 ? (
                                     <div className="text-center py-6 border-2 border-dashed border-slate-200 rounded-xl">
                                         <p className="text-sm text-slate-500 font-medium mb-2">No hay modelos guardados.</p>
-                                        <Link href="/dashboard/tools/tool-4-ai/configuracion" className="text-xs font-black text-rose-600 hover:underline">
+                                        <Link href="/dashboard/tools/tool-4-ai-studio/configuracion" className="text-xs font-black text-rose-600 hover:underline">
                                             Ir a Configuración →
                                         </Link>
                                     </div>
@@ -771,7 +798,7 @@ function GeneradorContent() {
                             <Loader2 size={32} className="animate-spin text-violet-600 mx-auto mb-3" />
                             <p className="font-black text-violet-800 text-sm">Generando tu video...</p>
                             <p className="text-xs text-violet-600 mt-1">Los videos pueden tardar entre 1 y 3 minutos. Podés esperar aquí o ir al historial.</p>
-                            <Link href="/dashboard/tools/tool-4-ai/historial" className="text-xs font-black text-violet-700 hover:underline mt-3 inline-block">
+                            <Link href="/dashboard/tools/tool-4-ai-studio/historial" className="text-xs font-black text-violet-700 hover:underline mt-3 inline-block">
                                 Ver Historial →
                             </Link>
                         </div>

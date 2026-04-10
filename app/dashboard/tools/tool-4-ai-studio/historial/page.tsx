@@ -71,7 +71,7 @@ export default function HistorialPage() {
 
             {/* Header */}
             <div className="flex items-center gap-3 mb-8 mt-12 md:mt-0">
-                <Link href="/dashboard/tools/tool-4-ai" className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+                <Link href="/dashboard/tools/tool-4-ai-studio" className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
                     <ArrowLeft size={20} />
                 </Link>
                 <div>
@@ -119,7 +119,7 @@ export default function HistorialPage() {
                     <History size={48} className="mx-auto text-slate-300 mb-4" />
                     <h3 className="text-xl font-bold text-slate-700 mb-2">Sin generaciones</h3>
                     <p className="text-slate-500 mb-6">Todavía no generaste ningún contenido con IA.</p>
-                    <Link href="/dashboard/tools/tool-4-ai/generador?tipo=foto" className="inline-flex items-center gap-2 bg-rose-600 text-white px-6 py-3 rounded-xl font-black hover:bg-rose-700 transition-colors">
+                    <Link href="/dashboard/tools/tool-4-ai-studio/generador?tipo=foto" className="inline-flex items-center gap-2 bg-rose-600 text-white px-6 py-3 rounded-xl font-black hover:bg-rose-700 transition-colors">
                         <Camera size={18} /> Crear primera sesión
                     </Link>
                 </div>
@@ -195,7 +195,7 @@ export default function HistorialPage() {
                                         <Download size={14} /> Descargar
                                     </a>
                                 )}
-                                <Link href={`/dashboard/tools/tool-4-ai/generador?tipo=${selectedItem.generation_type === 'photo' ? 'foto' : 'video'}`}
+                                <Link href={`/dashboard/tools/tool-4-ai-studio/generador?tipo=${selectedItem.generation_type === 'photo' ? 'foto' : 'video'}`}
                                     className="flex items-center gap-1.5 bg-rose-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-rose-700 transition-colors">
                                     <RefreshCw size={14} /> Regenerar
                                 </Link>

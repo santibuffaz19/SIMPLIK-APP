@@ -103,7 +103,7 @@ export default function ConfiguracionAiPage() {
             {/* Header */}
             <div className="flex items-center justify-between gap-3 mb-8 mt-12 md:mt-0">
                 <div className="flex items-center gap-3">
-                    <Link href="/dashboard/tools/tool-4-ai" className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+                    <Link href="/dashboard/tools/tool-4-ai-studio" className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
                         <ArrowLeft size={20} />
                     </Link>
                     <div>
