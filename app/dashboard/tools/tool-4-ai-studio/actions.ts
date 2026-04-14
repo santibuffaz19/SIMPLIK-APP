@@ -597,86 +597,91 @@ export async function generateVideoAction(params: {
                 .in('id', params.productIds);
 
             if (products && products.length > 0) {
+                if (!productName) productName = products[0].name;
+                for (const prod of products) {
+                    const internal: string[] = (prod.internal_reference_images || []).filter(Boolean);
+                    const pub: string[] = (prod.image_urls || []).filter(Boolean);
+                    referenceImages.push(...(internal.length > 0 ? internal : pub).slice(0, 1));
+                }
             }
         }
-    }
 
         if (params.savedModelId) {
-        const { data: model } = await supabase
-            .from('tool_ai_saved_models')
-            .select('reference_images')
-            .eq('id', params.savedModelId)
-            .single();
-        if (model) referenceImages.push(...(model.reference_images || []).filter(Boolean));
-    }
-
-    referenceImages = [...new Set(referenceImages)].slice(0, 1);
-
-    const finalPrompt = buildVideoPrompt({ ...params, productName }, params.pipeline);
-    const endpointModel = referenceImages.length > 0
-        ? 'fal-ai/kling-video/v2.1/standard/image-to-video'
-        : 'fal-ai/minimax/video-01-live';
-
-    const { data: generationRecord, error: insertError } = await supabase
-        .from('tool_ai_generations')
-        .insert({
-            generation_type: 'video',
-            pipeline: params.pipeline,
-            product_ids: params.productIds || [],
-            uploaded_reference_images: referenceImages,
-            saved_model_id: params.savedModelId || null,
-            background_type: params.backgroundType,
-            background_preset: params.backgroundPreset || null,
-            background_prompt: params.backgroundPrompt || null,
-            interaction_prompt: params.interactionPrompt || null,
-            extra_prompt: params.extraPrompt || null,
-            style: params.style || null,
-            camera_motion: params.cameraMotion || null,
-            duration_seconds: params.durationSeconds,
-            aspect_ratio: params.aspectRatio,
-            final_prompt: finalPrompt,
-            ai_provider: 'fal.ai',
-            ai_model: endpointModel,
-            status: 'processing',
-        })
-        .select('id')
-        .single();
-
-    const queueResult = await callFalVideoQueue({
-        prompt: finalPrompt,
-        referenceImageUrls: referenceImages,
-        durationSeconds: params.durationSeconds,
-        aspectRatio: params.aspectRatio,
-    });
-
-    if (!queueResult.success) {
-        if (!insertError && generationRecord) {
-            await supabase.from('tool_ai_generations').update({ status: 'failed', error_message: queueResult.error }).eq('id', generationRecord.id);
+            const { data: model } = await supabase
+                .from('tool_ai_saved_models')
+                .select('reference_images')
+                .eq('id', params.savedModelId)
+                .single();
+            if (model) referenceImages.push(...(model.reference_images || []).filter(Boolean));
         }
-        return { success: false, error: queueResult.error };
+
+        referenceImages = [...new Set(referenceImages)].slice(0, 1);
+
+        const finalPrompt = buildVideoPrompt({ ...params, productName }, params.pipeline);
+        const endpointModel = referenceImages.length > 0
+            ? 'fal-ai/kling-video/v2.1/standard/image-to-video'
+            : 'fal-ai/minimax/video-01-live';
+
+        const { data: generationRecord, error: insertError } = await supabase
+            .from('tool_ai_generations')
+            .insert({
+                generation_type: 'video',
+                pipeline: params.pipeline,
+                product_ids: params.productIds || [],
+                uploaded_reference_images: referenceImages,
+                saved_model_id: params.savedModelId || null,
+                background_type: params.backgroundType,
+                background_preset: params.backgroundPreset || null,
+                background_prompt: params.backgroundPrompt || null,
+                interaction_prompt: params.interactionPrompt || null,
+                extra_prompt: params.extraPrompt || null,
+                style: params.style || null,
+                camera_motion: params.cameraMotion || null,
+                duration_seconds: params.durationSeconds,
+                aspect_ratio: params.aspectRatio,
+                final_prompt: finalPrompt,
+                ai_provider: 'fal.ai',
+                ai_model: endpointModel,
+                status: 'processing',
+            })
+            .select('id')
+            .single();
+
+        const queueResult = await callFalVideoQueue({
+            prompt: finalPrompt,
+            referenceImageUrls: referenceImages,
+            durationSeconds: params.durationSeconds,
+            aspectRatio: params.aspectRatio,
+        });
+
+        if (!queueResult.success) {
+            if (!insertError && generationRecord) {
+                await supabase.from('tool_ai_generations').update({ status: 'failed', error_message: queueResult.error }).eq('id', generationRecord.id);
+            }
+            return { success: false, error: queueResult.error };
+        }
+
+        const generationId = insertError ? null : generationRecord?.id;
+
+        if (!insertError && generationId) {
+            await supabase.from('tool_ai_generations').update({
+                status: 'processing',
+                ai_request_id: queueResult.requestId,
+                ai_model: queueResult.endpointId || endpointModel,
+            }).eq('id', generationId);
+        }
+
+        return {
+            success: true,
+            generationId,
+            pending: true,
+            requestId: queueResult.requestId,
+            endpoint: queueResult.endpointId,
+        };
+
+    } catch (err: any) {
+        return { success: false, error: `Error interno: ${err.message}` };
     }
-
-    const generationId = insertError ? null : generationRecord?.id;
-
-    if (!insertError && generationId) {
-        await supabase.from('tool_ai_generations').update({
-            status: 'processing',
-            ai_request_id: queueResult.requestId,
-            ai_model: queueResult.endpointId || endpointModel,
-        }).eq('id', generationId);
-    }
-
-    return {
-        success: true,
-        generationId,
-        pending: true,
-        requestId: queueResult.requestId,
-        endpoint: queueResult.endpointId,
-    };
-
-} catch (err: any) {
-    return { success: false, error: `Error interno: ${err.message}` };
-}
 }
 
 // ─────────────────────────────────────────────────────────────
