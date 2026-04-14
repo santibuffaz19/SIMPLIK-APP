@@ -31,73 +31,75 @@ function getFalKey(): string | null {
 function buildPhotoPrompt(params: any, pipeline: Pipeline): string {
     const segments: string[] = [];
 
-    // ── CLAVE DE FIDELIDAD ──────────────────────────────────────────────────
-    // Con image_prompt_strength=0.85, la IA toma el PRODUCTO de la imagen de
-    // referencia casi textualmente. El prompt solo debe describir el FONDO,
-    // la ESCENA y la LUZ — NO el producto. Si describimos el producto en el
-    // prompt, compite con la imagen y la IA lo reinventa.
+    // ── ESTRATEGIA CON REDUX ────────────────────────────────────────────────
+    // flux-pro/v1/redux con strength=0.35:
+    //   65% imagen de referencia → producto preservado (forma, color, marca)
+    //   35% prompt → fondo/escena/iluminación cambia
+    //
+    // El prompt describe SOLO el fondo y la escena nueva.
+    // NO mencionar el producto — ya lo toma de la imagen.
     // ────────────────────────────────────────────────────────────────────────
 
-    // 1. Instrucción de preservación del producto (refuerza que no lo toque)
+    // 1. Tipo de fotografía (contexto general, sin describir el producto)
     if (pipeline === 'product_photo') {
-        segments.push(`Commercial product photography. Keep the exact product from the reference image unchanged — same shape, color, material, labels and details. Only change the background and lighting`);
+        segments.push('Professional commercial product photography');
     } else if (pipeline === 'fashion_photo') {
-        segments.push(`Fashion editorial photography. Keep the exact garment from the reference image — same color, fabric, cut, print and design. Only change the background, model pose and lighting`);
-        if (params.modelDescription) segments.push(`model: ${params.modelDescription}`);
+        segments.push('Professional fashion editorial photography');
+        if (params.modelDescription) segments.push(`featuring a model: ${params.modelDescription}`);
     } else if (pipeline === 'food_photo') {
-        segments.push(`Professional food photography. Keep the exact dish from the reference image — same colors, textures and presentation. Only change the background surface and lighting`);
+        segments.push('Professional food photography, appetizing, vibrant');
     }
 
-    // 2. Fondo / escena — esto es lo que SÍ cambia
+    // 2. Fondo / escena — descripción muy específica del ambiente
     const bgPresetMap: Record<string, string> = {
-        beach: `Background: sunny tropical beach, golden sand, turquoise sea, golden hour sunlight`,
-        space: `Background: dramatic outer space, deep black, stars and nebula colors, cosmic`,
-        white_studio: `Background: pure seamless white studio backdrop, soft even studio lighting, subtle drop shadow`,
-        black_studio: `Background: matte black seamless studio backdrop, dramatic side lighting, dark premium atmosphere`,
-        wooden_table: `Background: warm rustic wooden table surface, natural window light from left side`,
-        modern_kitchen: `Background: modern minimalist kitchen, white marble countertop, soft natural daylight`,
-        elegant_office: `Background: elegant office interior, blurred bookshelves, warm professional desk lamp light`,
-        ecommerce_premium: `Background: clean pure white e-commerce background, perfectly even soft box lighting, subtle soft shadow beneath product`,
-        lifestyle: `Background: bright airy lifestyle home setting, warm natural daylight, blurred interior`,
-        minimalist: `Background: clean light gray seamless gradient, minimal, generous empty space`,
-        advertising: `Background: dramatic advertising composition, dynamic staged environment, bold commercial lighting`,
-        storefront: `Background: luxury retail window display, premium glass and chrome, aspirational retail context`,
-        urban_street: `Background: urban city street, concrete sidewalk, city buildings out of focus, natural daylight`,
-        editorial_studio: `Background: editorial fashion studio, strong directional key light, dramatic shadows on backdrop`,
-        rooftop: `Background: rooftop terrace with city skyline, warm golden hour sunset light, urban panorama`,
-        modern_cafe: `Background: stylish café interior, warm amber ambient light, blurred wooden tables and chairs`,
-        pasarela: `Background: fashion runway, bright catwalk spotlights, audience blurred in background`,
-        gastronomic: `Background: fine dining restaurant table, soft candlelight, dark moody atmosphere, premium cutlery`,
+        beach: 'Change background to: sunny tropical beach with golden sand and turquoise sea, warm golden hour sunlight, cinematic depth of field, ocean waves visible in background',
+        space: 'Change background to: dramatic outer space environment, deep black starfield, colorful nebula clouds, cosmic atmosphere, dark and dramatic',
+        white_studio: 'Change background to: pure seamless white studio backdrop, professional even soft box lighting from both sides, clean white floor reflection, product drop shadow',
+        black_studio: 'Change background to: matte black seamless studio backdrop, dramatic Rembrandt side lighting, subtle rim light from behind, dark premium atmosphere',
+        wooden_table: 'Change background to: warm rustic oak wooden table surface, soft natural window light from the left, warm bokeh background, wood grain texture visible',
+        modern_kitchen: 'Change background to: modern minimalist white kitchen, marble countertop surface, soft natural daylight from window, clean interior design visible',
+        elegant_office: 'Change background to: elegant executive office interior, blurred bookshelves in background, warm professional desk lamp, premium leather and dark wood tones',
+        ecommerce_premium: 'Change background to: perfectly clean pure white e-commerce background, perfectly even studio lighting, razor sharp product edges, soft product shadow beneath',
+        lifestyle: 'Change background to: bright airy lifestyle living room, warm natural window light, tasteful home decor blurred in background, authentic comfortable atmosphere',
+        minimalist: 'Change background to: ultra-clean light gray seamless gradient background, minimal generous empty space on all sides, refined elegant simplicity',
+        advertising: 'Change background to: dramatic bold advertising composition, dynamic staged environment, strong directional hero lighting, commercial campaign atmosphere',
+        storefront: 'Change background to: premium luxury retail window display, glass and chrome fixtures, aspirational high-end retail store context, soft track lighting',
+        urban_street: 'Change background to: urban city street environment, concrete sidewalk, city buildings softly blurred in background, natural overcast daylight',
+        editorial_studio: 'Change background to: editorial fashion studio, strong directional key light creating dramatic shadows, dark gray textured backdrop, magazine quality',
+        rooftop: 'Change background to: rooftop terrace with panoramic city skyline, warm golden hour sunset light, city lights twinkling, elevated urban premium atmosphere',
+        modern_cafe: 'Change background to: stylish contemporary café interior, warm amber pendant lighting, wooden tables and chairs softly blurred, cozy sophisticated atmosphere',
+        pasarela: 'Change background to: fashion runway catwalk, bright professional spotlights, elegant audience blurred in background, high fashion event atmosphere',
+        gastronomic: 'Change background to: fine dining restaurant table setting, soft flickering candlelight, dark moody interior, premium cutlery and linen visible',
     };
 
     if (params.backgroundType === 'preset' && params.backgroundPreset) {
-        segments.push(bgPresetMap[params.backgroundPreset] || `Background: ${params.backgroundPreset}`);
+        segments.push(bgPresetMap[params.backgroundPreset] || `Change background to: ${params.backgroundPreset}`);
     } else if (params.backgroundType === 'color' && params.backgroundColor) {
-        segments.push(`Background: solid ${params.backgroundColor} color, uniform and clean`);
+        segments.push(`Change background to: solid uniform ${params.backgroundColor} colored background, clean and perfectly even`);
     } else if (params.backgroundType === 'prompt' && params.backgroundPrompt) {
-        segments.push(`Background and scene: ${params.backgroundPrompt}`);
+        segments.push(`Change background and scene to: ${params.backgroundPrompt}`);
     }
 
-    // 3. Pose / composición
+    // 3. Composición / pose
     const poseMap: Record<string, string> = {
-        centered_front: `Product centered in frame, front-facing, symmetrical composition`,
-        three_quarters: `Product at three-quarter angle, slight depth perspective`,
-        tilted: `Product slightly tilted, dynamic editorial angle`,
-        on_table: `Product resting naturally on a flat surface, tabletop shot`,
-        floating: `Product floating in mid-air, levitation effect, dynamic`,
-        in_use: `Product being used in its natural context`,
-        close_up: `Extreme close-up, product fills 80% of frame, shallow depth of field`,
-        advertising: `Wide hero shot, product as focal point, expansive background visible`,
-        macro: `Ultra-macro detail shot, surface texture emphasis`,
-        still_life: `Still life arrangement, product surrounded by complementary props`,
-        standing_front: `Model standing facing camera, full body shot`,
-        walking: `Model mid-stride, natural movement, candid energy`,
-        sitting: `Model seated, relaxed casual pose`,
-        turned_three_quarters: `Model at 3/4 angle profile`,
-        back_pose: `Model showing back, back-of-garment detail shot`,
-        editorial_pose: `Strong fashion editorial pose, magazine quality`,
-        urban_pose: `Casual street style pose, relaxed`,
-        sports_pose: `Dynamic athletic movement pose`,
+        centered_front: 'Composition: product centered in frame, front-facing, symmetrical, rule of thirds',
+        three_quarters: 'Composition: product at three-quarter angle, slight depth perspective',
+        tilted: 'Composition: product slightly tilted, dynamic editorial angle',
+        on_table: 'Composition: product resting naturally on flat surface, low angle tabletop shot',
+        floating: 'Composition: product floating in mid-air, levitation effect, dynamic energy',
+        in_use: 'Composition: product being actively used in context',
+        close_up: 'Composition: extreme close-up, product fills 80% of frame, very shallow depth of field',
+        advertising: 'Composition: wide hero advertising shot, product as focal point, expansive environment',
+        macro: 'Composition: ultra-macro detail shot, surface texture dominates frame',
+        still_life: 'Composition: elegant still life, product with complementary atmospheric props',
+        standing_front: 'Composition: model standing facing camera directly, full body in frame',
+        walking: 'Composition: model in natural mid-stride movement, candid lifestyle energy',
+        sitting: 'Composition: model seated in relaxed casual pose',
+        turned_three_quarters: 'Composition: model at 3/4 profile angle',
+        back_pose: 'Composition: model facing away, back of garment detail shot',
+        editorial_pose: 'Composition: strong avant-garde editorial fashion pose',
+        urban_pose: 'Composition: casual relaxed street style pose',
+        sports_pose: 'Composition: dynamic high-energy athletic movement',
     };
 
     if (params.pose) {
@@ -111,21 +113,21 @@ function buildPhotoPrompt(params: any, pipeline: Pipeline): string {
 
     // 5. Estilo visual
     const styleMap: Record<string, string> = {
-        ecommerce: `Clean e-commerce style, isolated subject, commercially optimized lighting`,
-        editorial: `High fashion editorial, artistic lighting direction, magazine quality`,
-        lifestyle: `Authentic lifestyle photography, warm natural light, genuine context`,
-        streetwear: `Urban streetwear aesthetic, raw edgy energy, city context`,
-        premium: `Ultra-premium luxury brand aesthetic, refined sophisticated lighting`,
-        sports: `High-performance sports photography, dynamic energy, bold colors`,
-        casual: `Casual everyday photography, warm natural tones, approachable`,
-        luxury: `Ultra-luxury opulent photography, gold tones, exclusive feel`,
-        brand_campaign: `Brand campaign imagery, aspirational storytelling`,
-        advertising_product: `Polished commercial advertising photography, bold hero shot`,
-        cinematic: `Cinematic film aesthetics, dramatic moody lighting, rich color grade`,
-        minimalist: `Ultra-minimalist, extreme negative space, single focal point`,
-        hyperrealistic: `Hyperrealistic photography, perfect detail, indistinguishable from real`,
-        food_premium: `Michelin-star food photography, steam visible, ingredients glistening`,
-        food_delivery: `Bright fresh appetizing food photo, vibrant colors, steam rising`,
+        ecommerce: 'Visual style: clean e-commerce, sharp isolated subject, commercially optimized',
+        editorial: 'Visual style: high fashion editorial, artistic dramatic lighting, magazine quality',
+        lifestyle: 'Visual style: authentic lifestyle photography, warm natural light, genuine feel',
+        streetwear: 'Visual style: urban streetwear aesthetic, raw edgy energy, authentic city feel',
+        premium: 'Visual style: ultra-premium luxury brand, refined sophisticated meticulous lighting',
+        sports: 'Visual style: high-performance sports photography, dynamic energy, bold saturated colors',
+        casual: 'Visual style: casual approachable everyday photography, warm natural tones',
+        luxury: 'Visual style: ultra-luxury opulent brand photography, rich jewel tones, exclusive',
+        brand_campaign: 'Visual style: aspirational brand campaign, emotional storytelling composition',
+        advertising_product: 'Visual style: polished commercial advertising, bold hero composition',
+        cinematic: 'Visual style: cinematic film aesthetics, dramatic moody lighting, rich color grade',
+        minimalist: 'Visual style: ultra-minimalist, extreme negative space, refined single focal point',
+        hyperrealistic: 'Visual style: hyperrealistic photography, perfect detail, indistinguishable from real life',
+        food_premium: 'Visual style: Michelin-star food photography, steam visible, ingredients glistening',
+        food_delivery: 'Visual style: bright fresh appetizing food photo, vibrant colors, steam rising',
     };
 
     if (params.style) {
@@ -137,8 +139,8 @@ function buildPhotoPrompt(params: any, pipeline: Pipeline): string {
         segments.push(params.extraPrompt);
     }
 
-    // 7. Calidad técnica — siempre al final
-    segments.push(`Professional DSLR photography, sharp focus, perfect exposure, commercial quality`);
+    // 7. Calidad — siempre al final
+    segments.push('Professional DSLR photography, sharp focus, perfect exposure, 8K commercial quality');
 
     return segments.join('. ');
 }
@@ -209,20 +211,21 @@ function buildVideoPrompt(params: any, pipeline: Pipeline): string {
 // ─────────────────────────────────────────────────────────────
 // FAL.AI — IMAGEN (síncrona)
 //
-// ESTRATEGIA DE MÁXIMA FIDELIDAD AL PRODUCTO:
+// MODELO: fal-ai/flux-pro/v1/redux (image variation + prompt)
 //
-// CON referencia → fal-ai/flux-pro/v1.1 con image_prompt_strength ALTO
-//   image_prompt_strength controla cuánto peso tiene la imagen vs el prompt:
-//     0.0 = ignora imagen completamente (solo sigue el texto)
-//     1.0 = copia imagen sin cambios (ignora el texto)
-//     0.85 = 85% imagen + 15% texto → el producto se preserva casi exacto,
-//            y el prompt apenas modifica el FONDO/ESCENA sin tocar el producto
+// Redux es el modelo correcto para "producto en nueva escena":
+//   - Toma la imagen de referencia del producto
+//   - Aplica el prompt para cambiar el fondo/escena/iluminación
+//   - strength controla cuánto cambia la imagen:
+//       0.1 = casi idéntica (demasiado conservador)
+//       0.35 = preserva producto, cambia escena ← ÓPTIMO
+//       0.6 = cambia bastante, producto parcialmente preservado
+//       0.9 = reinventa casi todo (lo que causaba el fasco marrón)
 //
-//   El prompt en este modo NO debe describir el producto (ya está en la imagen).
-//   Solo describe el fondo, la luz y el ambiente. Así la IA combina:
-//   → producto real de la foto + fondo/escena del prompt
+// El prompt describe SOLO la escena nueva, no el producto.
+// El producto viene de la imagen de referencia.
 //
-// SIN referencia → fal-ai/flux/dev (text-to-image puro, económico)
+// SIN referencia → fal-ai/flux/dev (text-to-image puro)
 // ─────────────────────────────────────────────────────────────
 async function callFalImageGeneration(params: {
     prompt: string;
@@ -245,13 +248,13 @@ async function callFalImageGeneration(params: {
     let body: Record<string, any>;
 
     if (hasRef) {
-        // Alta fidelidad al producto: 0.85 = la IA copia el producto casi exacto
-        // y solo aplica el fondo/escena del prompt sin reinventar el producto
-        endpoint = 'https://fal.run/fal-ai/flux-pro/v1.1';
+        // flux-pro/v1/redux: el modelo correcto para producto en nueva escena
+        // strength 0.35 = preserva forma y color del producto, cambia el fondo
+        endpoint = 'https://fal.run/fal-ai/flux-pro/v1/redux';
         body = {
             prompt: params.prompt,
             image_url: cleanRefs[0],
-            image_prompt_strength: 0.85,
+            strength: 0.35,
             image_size,
             num_inference_steps: 28,
             guidance_scale: 3.5,
@@ -260,6 +263,7 @@ async function callFalImageGeneration(params: {
             safety_tolerance: '5',
         };
     } else {
+        // Sin referencia: flux/dev text-to-image puro
         endpoint = 'https://fal.run/fal-ai/flux/dev';
         body = {
             prompt: params.prompt,
@@ -304,6 +308,7 @@ async function callFalImageGeneration(params: {
         return { success: false, error: `Error de red con fal.ai: ${err.message}` };
     }
 }
+
 
 // ─────────────────────────────────────────────────────────────
 // FAL.AI — VIDEO (asíncrona via queue)
@@ -538,7 +543,7 @@ export async function generateImageAction(params: {
                 style: params.style || null,
                 final_prompt: finalPrompt,
                 ai_provider: 'fal.ai',
-                ai_model: referenceImages.length > 0 ? 'flux-pro/v1.1' : 'flux/dev',
+                ai_model: referenceImages.length > 0 ? 'flux-pro/v1/redux' : 'flux/dev',
                 status: 'processing',
             })
             .select('id')
@@ -705,7 +710,7 @@ export async function checkGenerationStatusAction(generationId: string) {
                 ? data.ai_model
                 : data.generation_type === 'video'
                     ? 'fal-ai/kling-video/v2.1/standard/image-to-video'
-                    : 'fal-ai/flux-pro/v1.1';
+                    : 'fal-ai/flux-pro/v1/redux';
 
             const polled = await pollFalQueue(data.ai_request_id, endpointId);
 
